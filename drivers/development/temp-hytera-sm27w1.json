@@ -1,0 +1,40 @@
+{
+	"name": "Hytera SM27W",
+	"deviceName": "SM27W1",
+	"type": "hfp",
+	"write": {
+		"startCmdStr": "01",
+		"startCmdStrType": "hex",
+		"eol": "\r\n",
+		"serialDataType": "ascii",
+		"intentMap": {
+			"android.intent.CHANNELS.current": {
+				"request": "android.intent.CHANNELS.get_current"
+			},
+			"android.intent.CHANNELS.list": {
+				"request": "android.intent.CHANNELS.get_list"
+			},
+			"android.intent.USERS.talking": {
+				"request": "android.intent.CHANNELS.get_talking"
+			},
+			"android.intent.USERS.list": {
+				"request": "android.intent.CHANNELS.get_list"
+			}
+		}
+	},
+	"read": {
+	  "pttDownKeyIntent": "android.intent.action.PTT.pressed",
+		"defaultPttDownKeyDelay": 0,
+		"intentDeDuplicate": true,
+		"intentDeDuplicateTimeout": 50,
+		"eol": "\r\n",
+		"serialDataType": "ascii",
+		"intentMap": {
+			"+PTT=P": "android.intent.action.PTT.pressed",
+			"+PTT=R": "android.intent.action.PTT.released",
+			"C:SOS*": "android.intent.action.SOS",
+			"C:VP*": "android.intent.action.TALK_GROUP.prev",
+			"C:VM*": "android.intent.action.TALK_GROUP.next"
+		}
+	}
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_action_bt_connect"
+        android:title="@string/connect"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/menu_action_bt_disconnect"
+        android:title="@string/disconnect"
+        app:showAsAction="always"
+        android:visible="false" />
+    <item
+        android:id="@+id/menu_action_bt_settings"
+        android:title="Bluetooth settings" />
+    <item
+        android:id="@+id/menu_action_about_app"
+        android:title="About" />
+</menu>

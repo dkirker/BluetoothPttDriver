@@ -1,0 +1,35 @@
+{
+	"name": "Emulate Symbol",
+	"deviceName": "WM500_",
+	"watchForDeviceName": "WM500_",
+	"type": "ble",
+	"write": {
+		"service": "00001802-0000-1000-8000-00805f9b34fb",
+		"characteristic": "00002a06-0000-1000-8000-00805f9b34fb",
+		"startCmdStr": "01",
+		"startCmdStrType": "hex"
+	},
+	"read": {
+		"service": "8925d23d-03e4-4447-826c-418dadc7f483",
+    "pttDownKeyIntent": "com.symbol.button.L2",
+    "defaultPttDownKeyDelay": 100,
+		"intentDeDuplicate": true,
+		"intentDeDuplicateTimeout": 50,
+		"serialDataType": "hex",
+		"characteristicMaps": {
+			"14c56166-6888-4089-b0ce-269d098fe528": {
+				"01": "com.symbol.button.L2:KEYCODE_L2,0",
+				"00": "com.symbol.button.L2:KEYCODE_L2,1"
+			},
+			"891899c0-cabf-4f9d-bf57-b04030e8ad63": {
+				"01": "android.intent.action.SOS"
+			},
+			"4dc19cfb-eaf6-44b6-9b17-c90fc82d3505": {
+				"0101": "android.intent.action.P1",
+				"0201": "android.intent.action.TALK_GROUP.prev",
+				"0301": "android.intent.action.TALK_GROUP.next",
+				"0401": "android.intent.action.P4"
+			}
+		}
+	}
+}

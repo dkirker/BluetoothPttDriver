@@ -1,0 +1,41 @@
+{
+	"name": "BT-85 SPP",
+	"deviceName": "18SE_AGHF",
+	"type": "spp",
+	"read": {
+		"pttDownKeyIntent": "android.intent.action.PTT.pressed",
+		"defaultPttDownKeyDelay": 100,
+		"intentDeDuplicate": true,
+		"intentDeDuplicateTimeout": 50,
+		"eol": "00",
+		"serialDataType": "ascii",
+		"intentMap": {
+			"+PTT=P": "android.intent.action.PTT.pressed",
+			"+PTT=R": "android.intent.action.PTT.released",
+			"C:SOS*": "android.intent.action.SOS",
+			"+KEY=00": "android.intent.action.DTMF.released",
+			"+KEY=01": "android.intent.action.TALK_GROUP.next",
+			"+KEY=02": "android.intent.action.TALK_GROUP.prev",
+			"+KEY=03": "android.intent.action.DTMF.0",
+			"+KEY=04": "android.intent.action.DTMF.1",
+			"+KEY=05": "android.intent.action.DTMF.2",
+			"+KEY=06": "android.intent.action.DTMF.3",
+			"+KEY=07": "android.intent.action.DTMF.4",
+			"+KEY=08": "android.intent.action.DTMF.5",
+			"+KEY=09": "android.intent.action.DTMF.6",
+			"+KEY=10": "android.intent.action.DTMF.7",
+			"+KEY=11": "android.intent.action.DTMF.8",
+			"+KEY=12": "android.intent.action.DTMF.9",
+			"+KEY=13": "android.intent.action.DTMF.A",
+			"+KEY=14": "android.intent.action.DTMF.B",
+			"+KEY=15": "android.intent.action.DTMF.C",
+			"+KEY=16": "android.intent.action.DTMF.D",
+			"+KEY=17": "android.intent.action.DTMF.STAR",
+			"+KEY=18": "android.intent.action.DTMF.POUND",
+			"+KEY=19": "android.intent.action.P1",
+			"+KEY=20": "android.intent.action.P2",
+			"+KEY=21": "android.intent.action.P3",
+			"+KEY=22": "android.intent.action.P4"
+		}
+	}
+}

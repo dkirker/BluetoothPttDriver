@@ -1,0 +1,24 @@
+{
+	"name": "B01 SPP",
+	"deviceName": "B01",
+	"type": "spp",
+	"write": {
+		"startCmdStr": "01",
+		"startCmdStrType": "hex"
+	},
+	"read": {
+		"pttDownKeyIntent": "android.intent.action.PTT.pressed",
+		"defaultPttDownKeyDelay": 100,
+		"intentDeDuplicate": true,
+		"intentDeDuplicateTimeout": 50,
+		"eol": "00",
+		"serialDataType": "ascii",
+		"intentMap": {
+			"+PTT=P": "android.intent.action.PTT.pressed",
+			"+PTT=R": "android.intent.action.PTT.released",
+			"C:SOS*": "android.intent.action.SOS",
+			"C:VP*": "android.intent.action.TALK_GROUP.prev",
+			"C:VM*": "android.intent.action.TALK_GROUP.next"
+		}
+	}
+}

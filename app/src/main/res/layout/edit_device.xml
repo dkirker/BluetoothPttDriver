@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="10dp"
+    android:layout_margin="30dp"
+    android:orientation="vertical">
+
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <com.google.android.flexbox.FlexboxLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                app:alignContent="center"
+                app:flexWrap="nowrap">
+
+                <com.google.android.flexbox.FlexboxLayout
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    app:alignItems="flex_start"
+                    app:flexWrap="nowrap"
+                    app:layout_alignSelf="stretch">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        app:alignContent="flex_start">
+
+                        <TextView
+                            android:id="@+id/editdevice_label_pttDevice"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="20dp"
+                            android:text="@string/label_device_name" />
+
+
+                        <TextView
+                            android:id="@+id/editdevice_label_pttDeviceName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingTop="10dp"
+                            android:text="@string/no_device"
+                            app:layout_alignSelf="stretch" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/editdevice_input_pttDeviceName"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:visibility="gone">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/editdevice_inputedittext_pttDeviceName"
+                                android:layout_width="100dp"
+                                android:layout_height="wrap_content"
+                                android:labelFor="@id/editdevice_label_pttDevice"
+                                android:maxLength="50"
+                                android:paddingLeft="10dp"
+                                android:paddingRight="10dp"
+                                android:selectAllOnFocus="true"
+                                android:singleLine="true" />
+
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                    </LinearLayout>
+
+                </com.google.android.flexbox.FlexboxLayout>
+
+
+                <com.google.android.flexbox.FlexboxLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:alignItems="flex_end"
+                    app:flexWrap="nowrap"
+                    app:layout_alignSelf="flex_end">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/editdevice_button_pttDevice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/select_device" />
+
+                </com.google.android.flexbox.FlexboxLayout>
+
+            </com.google.android.flexbox.FlexboxLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="10dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/editdevice_label_pttMacLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="20dp"
+                        android:text="@string/label_device_mac" />
+
+
+                    <TextView
+                        android:id="@+id/editdevice_label_pttDeviceMac"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="10dp"
+                        android:text=""
+                        app:layout_alignSelf="stretch" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/editdevice_input_pttDeviceMac"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/editdevice_inputedittext_pttDeviceMac"
+                            android:layout_width="100dp"
+                            android:layout_height="wrap_content"
+                            android:labelFor="@id/editdevice_label_pttMacLabel"
+                            android:maxLength="17"
+                            android:paddingLeft="10dp"
+                            android:paddingRight="10dp"
+                            android:selectAllOnFocus="true"
+                            android:singleLine="true" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="10dp">
+
+                    <TextView
+                        android:id="@+id/editdevice_label_pttDriverLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="20dp"
+                        android:text="@string/label_driver" />
+
+                    <TextView
+                        android:id="@+id/editdevice_label_pttNoDriversLabel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_no_drivers"
+                        android:textColor="#F85151"
+                        android:visibility="gone" />
+
+                    <!--<Spinner
+                        android:id="@+id/editdevice_dropdown_pttDriverSelect"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:spinnerMode="dropdown" />-->
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/editdevice_layout_pttDriverSelect"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/select_driver">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/editdevice_dropdown_pttDriverSelect"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none" />
+
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="10dp">
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/editdevice_checkBox_autoConnect"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/auto_connect" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="10dp">
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/editdevice_checkBox_autoReonnect"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/auto_reconnect" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:paddingTop="10dp">
+
+                    <TextView
+                        android:id="@+id/editdevice_label_pttDownKeyDelay"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_ptt_down_key_delay_ms" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/editdevice_input_pttDevicePttDownKeyDelay"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+
+                            android:layout_height="wrap_content">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/editdevice_inputedittext_pttDevicePttDownKeyDelay"
+                                android:layout_width="100dp"
+                                android:layout_height="wrap_content"
+                                android:digits="0123456789"
+                                android:inputType="number"
+                                android:labelFor="@id/editdevice_label_pttDownKeyDelay"
+                                android:maxLength="5"
+                                android:paddingLeft="10dp"
+                                android:paddingRight="10dp"
+                                android:selectAllOnFocus="true"
+                                android:singleLine="true" />
+
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <TextView
+                            android:id="@+id/editdevice_label_pttDownKeyDelayUnits"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_horizontal"
+                            android:paddingStart="10dp"
+                            android:text="@string/label_unit_ms" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

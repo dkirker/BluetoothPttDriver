@@ -1,7 +1,52 @@
-<resources>
-    <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
+<resources xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--<style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+    </style>-->
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.MaterialComponents">
+        <item name="android:textColorPrimary">#FFF</item>
+        <item name="android:textColorSecondary">#AAA</item>
+        <item name="android:textColorPrimaryInverse">#000</item>
+        <item name="android:textColorSecondaryInverse">#666</item>
+
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+        <item name="actionBarStyle">@style/AppDarkActionBar</item>
     </style>
+    <!--<style name="Theme.App" parent="Theme.MaterialComponents.Light.NoActionBar">
+
+    </style>-->
+
+    <style name="Theme.App" parent="@style/Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+        <item name="actionBarStyle">@style/AppDarkActionBar</item>
+    </style>
+
+    <style name="Theme.App.Dark" parent="@style/Theme.AppCompat">
+        <item name="android:textColorPrimary">#FFF</item>
+        <item name="android:textColorSecondary">#DDD</item>
+        <item name="android:textColorPrimaryInverse">#FFF</item>
+        <item name="android:textColorSecondaryInverse">#AAA</item>
+
+        <item name="actionBarStyle">@style/AppDarkActionBar</item>
+    </style>
+
+    <style name="AppDarkActionBar" parent="@style/Widget.AppCompat.ActionBar.Solid">
+        <item name="titleTextStyle">@style/AppDarkActionBarText</item>
+    </style>
+
+    <style name="AppDarkActionBarText" parent="@style/TextAppearance.AppCompat.Widget.ActionBar.Title">
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+
+    <style name="Theme.App.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 </resources>

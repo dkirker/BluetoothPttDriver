@@ -1,6 +1,24 @@
 <resources>
-    <string name="app_name">Simple BLE Terminal</string>
-    <string name="devices">Bluetooth LE Devices</string>
+    <string name="app_name">BT PTT</string>
+
+    <string name="device">Device</string>
+    <string name="devices">Devices</string>
+    <string name="driver">Driver</string>
+    <string name="drivers">Drivers</string>
+
+    <string name="label_driver">Driver:</string>
+    <string name="label_device_name">Device Name:</string>
+    <string name="label_device_mac">MAC Address:</string>
+    <string name="label_no_drivers">No drivers available! Device will be saved without an associated driver.</string>
+
+    <string name="save">Save</string>
+    <string name="add">Add</string>
+    <string name="update">Update</string>
+    <string name="cancel">Cancel</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+
+    <string name="bt_devices">Bluetooth Devices</string>
 
     <string name="location_permission_title">Location permission required</string>
     <string name="location_permission_message">This app does not use location information, but scanning for Bluetooth LE devices requires this permission</string>
@@ -8,5 +26,83 @@
     <string name="location_denied_title">Location permission denied</string>
     <string name="location_denied_message">As location permission has not been granted, this app cannot scan for Bluetooth LE devices.</string>
     <string name="pairing_request">PAIRING requested\n-> Perform pairing steps. Connect again</string>
+
+    <string name="add_driver">Add driver</string>
+    <string name="edit_driver">Update driver</string>
+    <string name="select_driver">Select driver</string>
+    <string name="no_driver">No driver</string>
+    <string name="add_device">Add device</string>
+    <string name="edit_device">Update device</string>
+    <string name="select_device">Select device</string>
+    <string name="no_device">No device</string>
+    <string name="auto_connect">Auto connect</string>
+    <string name="auto_reconnect">Auto reconnect</string>
+    <string name="label_ptt_down_key_delay_ms">PTT Down key delay (milliseconds):</string>
+    <string name="label_unit_ms">ms</string>
+
+    <string name="background_service">Background service</string>
+    <string name="connecting_to_prefix">Connecting to </string>
+    <string name="connected_to_prefix">Connected to </string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="reconnect">Reconnect</string>
+    <string name="battery_prefix">Battery: </string>
+
+    <string name="ok">OK</string>
+
+    <string name="label_status">Status:</string>
+    <string name="status_connecting_to_device">Connecting to device...</string>
+    <string name="status_attaching_to_service">Attaching to service...</string>
+    <string name="status_starting_service">Starting service...</string>
+    <string name="status_service_connected">Service Connected</string>
+    <string name="status_connecting">Connecting...</string>
+    <string name="status_disconnecting">Disconnecting...</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_enabling">Enabling...</string>
+    <string name="status_prefix_connection_failed">Connection failed: </string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_reconnecting">Reconnecting...</string>
+    <string name="status_failed_to_reconnect">Failed to reconnect</string>
+    <string name="status_prefix_failed_to_reconnect">Failed to reconnect: </string>
+    <string name="status_prefix_connection_lost">Connection lost: </string>
+    <string name="status_invalid_driver">Invalid driver</string>
+
+    <string name="about_dialog_title"><![CDATA[<h1>%s %s</h1>]]></string>
+    <string name="about_dialog_body"><![CDATA[
+Copyright &#169; 2022 Donald Kirker<br/>
+Copyright &#169; 2019 Kai Morich<br/>
+<br/>
+<h1>About the App</h1>
+Built from the code for SimpleBluetoothLeTerminal and SimpleBluetoothTerminal by Kai Morich,
+this app allows for connecting Bluetooth RSM (remote speaker mic) and PTT buttons to app functions
+through the use of Android Intents dynamically using driver definitions.
+<br/>
+<h1>License</h1>
+<a href=>MIT License</a><br/>
+Copyright &#169; 2019 Kai Morich<br/>
+<br/>
+<small>Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:<br/>
+<br/>
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.<br/>
+<br/>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</small>
+<br/><br/><br/>
+Get the source code of the app here on <a href=https://github.com/dkirker/BluetoothPttDriver>GitHub</a>!
+]]></string>
+
+    <string name="driver_validation_error">Driver Validation Error</string>
+    <string name="driver_select_failed">Failed to open driver file. Driver file is invalid.</string>
 
 </resources>
