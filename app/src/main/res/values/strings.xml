@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BT PTT</string>
+    <string name="app_name">PTT Driver</string>
 
     <string name="device">Device</string>
     <string name="devices">Devices</string>
