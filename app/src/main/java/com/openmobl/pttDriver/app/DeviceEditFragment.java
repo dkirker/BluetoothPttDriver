@@ -8,7 +8,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -16,30 +15,27 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.flexbox.FlexboxLayout;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
-import com.google.android.material.datepicker.MaterialTextInputPicker;
-import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.openmobl.pttDriver.db.DriverDatabase;
 import com.openmobl.pttDriver.db.DriverSQLiteDatabase;
 import com.openmobl.pttDriver.model.Device;
+import com.openmobl.pttDriver.model.Device.DeviceType;
 import com.openmobl.pttDriver.model.Driver;
 import com.openmobl.pttDriver.model.ModelDataAction;
 import com.openmobl.pttDriver.R;
 import com.openmobl.pttDriver.model.PttDriver;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class DeviceEditFragment extends DialogFragment {
@@ -56,6 +52,7 @@ public class DeviceEditFragment extends DialogFragment {
         void onDeviceEdit(ModelDataAction action, Device device);
     }
 
+    private AutoCompleteTextView mDeviceTypeDropdown;
     private MaterialButton mDeviceButton;
     private TextView mDeviceLabel;
     private TextView mDeviceMac;
@@ -63,6 +60,9 @@ public class DeviceEditFragment extends DialogFragment {
     private MaterialCheckBox mAutoConnect;
     private MaterialCheckBox mAutoReconnect;
     private TextInputLayout mPttDownKeyDelay;
+    private FlexboxLayout mDeviceSelectLayout;
+    private LinearLayout mMacAddressLayout;
+    private LinearLayout mAutoReconnectLayout;
 
     private TextView mDeviceNameLabel;
     private boolean mAdvancedMode = false;
@@ -76,6 +76,7 @@ public class DeviceEditFragment extends DialogFragment {
     private BroadcastReceiver mDevicePicker;
     private Driver mDriver;
     private List<Driver> mDrivers;
+    private DeviceType mEditingDeviceType = DeviceType.BLUETOOTH;
 
     private DriverDatabase mDb;
 
@@ -91,11 +92,11 @@ public class DeviceEditFragment extends DialogFragment {
     }
 
     private Device getDevice() {
-        return getArguments().getParcelable(ARGUMENT_DEVICE);
+        return getArguments() != null ? getArguments().getParcelable(ARGUMENT_DEVICE) : null;
     }
 
     private ModelDataAction getAction() {
-        return ModelDataAction.values()[getArguments().getInt(ARGUMENT_ACTION)];
+        return ModelDataAction.values()[getArguments() != null ? getArguments().getInt(ARGUMENT_ACTION) : 1];
     }
 
     @Override
@@ -169,17 +170,33 @@ public class DeviceEditFragment extends DialogFragment {
             }
         };
 
-        mDeviceNameLabel = (TextView)view.findViewById(R.id.editdevice_label_pttDevice);
-        mDeviceLabel = (TextView)view.findViewById(R.id.editdevice_label_pttDeviceName);
-        mDeviceButton = (MaterialButton)view.findViewById(R.id.editdevice_button_pttDevice);
-        mDeviceMac = (TextView)view.findViewById(R.id.editdevice_label_pttDeviceMac);
-        mDriverDropdown = (AutoCompleteTextView)view.findViewById(R.id.editdevice_dropdown_pttDriverSelect);
-        mAutoConnect = (MaterialCheckBox)view.findViewById(R.id.editdevice_checkBox_autoConnect);
-        mAutoReconnect = (MaterialCheckBox)view.findViewById(R.id.editdevice_checkBox_autoReonnect);
-        mPttDownKeyDelay = (TextInputLayout)view.findViewById(R.id.editdevice_input_pttDevicePttDownKeyDelay);
+        mDeviceTypeDropdown = view.findViewById(R.id.editdevice_dropdown_pttDeviceTypeSelect);
+        mDeviceNameLabel = view.findViewById(R.id.editdevice_label_pttDevice);
+        mDeviceLabel = view.findViewById(R.id.editdevice_label_pttDeviceName);
+        mDeviceButton = view.findViewById(R.id.editdevice_button_pttDevice);
+        mDeviceMac = view.findViewById(R.id.editdevice_label_pttDeviceMac);
+        mDriverDropdown = view.findViewById(R.id.editdevice_dropdown_pttDriverSelect);
+        mAutoConnect = view.findViewById(R.id.editdevice_checkBox_autoConnect);
+        mAutoReconnect = view.findViewById(R.id.editdevice_checkBox_autoReonnect);
+        mPttDownKeyDelay = view.findViewById(R.id.editdevice_input_pttDevicePttDownKeyDelay);
+        mDeviceSelectLayout = view.findViewById(R.id.editdevice_layout_pttSelectDevice);
+        mMacAddressLayout = view.findViewById(R.id.editdevice_layout_pttMac);
+        mAutoReconnectLayout = view.findViewById(R.id.editdevice_layout_pttAutoReconnect);
 
-        mDeviceNameInput = (TextInputLayout)view.findViewById(R.id.editdevice_input_pttDeviceName);
-        mDeviceMacInput = (TextInputLayout)view.findViewById(R.id.editdevice_input_pttDeviceMac);
+        mDeviceNameInput = view.findViewById(R.id.editdevice_input_pttDeviceName);
+        mDeviceMacInput = view.findViewById(R.id.editdevice_input_pttDeviceMac);
+
+        ArrayAdapter<String> deviceTypeDropdownAdapter = new ArrayAdapter<>(requireContext(), R.layout.driver_list_item, getResources().getStringArray(R.array.device_type_names));
+        mDeviceTypeDropdown.setAdapter(deviceTypeDropdownAdapter);
+        mDeviceTypeDropdown.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String[] types = getResources().getStringArray(R.array.device_type_values);
+
+                mEditingDeviceType = DeviceType.toDeviceType(types[position]);
+                updateLayouts();
+            }
+        });
 
         mDeviceNameLabel.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -227,6 +244,16 @@ public class DeviceEditFragment extends DialogFragment {
                         if (mPttDownKeyDelay.getEditText() != null) {
                             mPttDownKeyDelay.getEditText().setText(Integer.toString(driverObj.getReadObj().getDefaultPttDownKeyDelay()));
                         }
+
+                        if (mEditingDeviceType == DeviceType.LOCAL) {
+                            String generated = getResources().getString(R.string.local_device_address_prefix) + mDriver.getName().replaceAll("[^a-zA-Z\\d]","_");
+                            mDeviceMac.setText(generated);
+                            if (mAdvancedMode) {
+                                if (mDeviceMacInput.getEditText() != null) {
+                                    mDeviceMacInput.getEditText().setText(generated);
+                                }
+                            }
+                        }
                     } catch (Exception e) {
                         Log.d(TAG, "Driver JSON: " + mDriver.getJson());
                         e.printStackTrace();
@@ -244,6 +271,7 @@ public class DeviceEditFragment extends DialogFragment {
 
         Device old = getDevice();
         if (old != null) {
+            mEditingDeviceType = old.getDeviceType();
             mDeviceLabel.setText(old.getName());
             mDeviceMac.setText(old.getMacAddress());
             mDeviceSelected = true;
@@ -261,15 +289,77 @@ public class DeviceEditFragment extends DialogFragment {
             if (mPttDownKeyDelay.getEditText() != null)
                 mPttDownKeyDelay.getEditText().setText(Integer.toString(Device.getPttDownDelayDefault()));
         }
+        mDeviceTypeDropdown.setText(getDeviceTypeNameFromValue(mEditingDeviceType), false);
+        updateLayouts();
 
         // Fixes issues with text colour on light themes with pre-honeycomb devices.
         //builder.setInverseBackgroundForced(true);
 
-        builder.setTitle(getAction() == ModelDataAction.EDIT ? R.string.add_device : R.string.edit_device);
+        builder.setTitle(getAction() == ModelDataAction.EDIT ? R.string.edit_device : R.string.add_device);
 
         builder.setView(view);
 
         return builder.create();
+    }
+
+    private String getDeviceTypeNameFromValue(DeviceType type) {
+        String result = type.toString();
+        String[] names = getResources().getStringArray(R.array.device_type_names);
+        String[] values = getResources().getStringArray(R.array.device_type_values);
+
+        int pos = Arrays.binarySearch(values, result);
+
+        if (pos >= 0) {
+            result = names[pos];
+        }
+
+        return result;
+    }
+
+    private void updateLayouts() {
+        switch (mEditingDeviceType) {
+            case BLUETOOTH:
+                if (mDeviceSelected) {
+                    String deviceName = "";
+                    if (mPttDevice != null) {
+                        deviceName = mPttDevice.getName();
+                    } else {
+                        Device old = getDevice();
+                        deviceName = old != null ? old.getName() : "";
+                    }
+
+                    mDeviceLabel.setText(deviceName);
+                    if (mAdvancedMode) {
+                        if (mDeviceNameInput.getEditText() != null) {
+                            mDeviceNameInput.getEditText().setText(deviceName);
+                        }
+                    }
+                } else if (getAction() == ModelDataAction.ADD) {
+                    mDeviceLabel.setText(R.string.no_device);
+                    if (mAdvancedMode) {
+                        if (mDeviceNameInput.getEditText() != null) {
+                            mDeviceNameInput.getEditText().setText(R.string.no_device);
+                        }
+                    }
+                }
+                mDeviceSelectLayout.setVisibility(View.VISIBLE);
+                mMacAddressLayout.setVisibility(View.VISIBLE);
+                mAutoReconnectLayout.setVisibility(View.VISIBLE);
+                break;
+            case LOCAL:
+                if (getAction() == ModelDataAction.ADD || mDeviceSelected) {
+                    mDeviceLabel.setText(R.string.this_device);
+                    if (mAdvancedMode) {
+                        if (mDeviceNameInput.getEditText() != null) {
+                            mDeviceNameInput.getEditText().setText(R.string.this_device);
+                        }
+                    }
+                }
+                mDeviceSelectLayout.setVisibility(View.GONE);
+                mMacAddressLayout.setVisibility(View.GONE);
+                mAutoReconnectLayout.setVisibility(View.GONE);
+                break;
+        }
     }
 
     private Driver lookupDriver(int id) {
@@ -289,7 +379,7 @@ public class DeviceEditFragment extends DialogFragment {
     private boolean validate() {
         // We assume that mDeviceMac has a value because that gets filled with mDeviceLabl.
         // The mDeviceLabel gets populated either from prior device or selecting a new device.
-        boolean deviceValid = mDeviceSelected;
+        boolean deviceValid = mEditingDeviceType == DeviceType.LOCAL || mDeviceSelected;
         boolean driverValid = mDriver != null;
         boolean inputValid = mPttDownKeyDelay.getEditText() != null &&
                 mPttDownKeyDelay.getEditText().getText() != null &&
@@ -333,9 +423,17 @@ public class DeviceEditFragment extends DialogFragment {
             driverName = mDriver.getName();
         }
 
-        if (mPttDevice != null) {
-            name = mPttDevice.getName();
-            mac = mPttDevice.getAddress();
+        switch (mEditingDeviceType) {
+            case BLUETOOTH:
+                if (mPttDevice != null) {
+                    name = mPttDevice.getName();
+                    mac = mPttDevice.getAddress();
+                }
+                break;
+            case LOCAL:
+                name = mDeviceLabel.getText().toString();
+                mac = mDeviceMac.getText().toString();
+                break;
         }
 
         if (mAdvancedMode) {
@@ -347,7 +445,7 @@ public class DeviceEditFragment extends DialogFragment {
             }
         }
 
-        return new Device(id, name, mac, driverId, driverName,
+        return new Device(id, mEditingDeviceType, name, mac, driverId, driverName,
                         autoConnect, autoReconnect, pttDownKeyDelay);
     }
 

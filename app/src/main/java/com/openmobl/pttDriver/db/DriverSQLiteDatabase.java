@@ -18,12 +18,14 @@ public class DriverSQLiteDatabase  extends SQLiteOpenHelper implements DriverDat
     private static final String TAG = DriverSQLiteDatabase.class.getName();
 
     public static final String DB_NAME = "pttdriver.db";
-    public static final int DB_VERSION = 2;
+    public static final int DB_VERSION = 3;
 
-    public static final int DEVWATCH_ADD_AFTER_VER = 1;
+    private static final int DEVWATCH_ADD_AFTER_VER = 1;
+    private static final int DEVTYPE_ADD_AFTER_VER = 2;
 
     private static final String TABLE_DEVICES = "devices";
     private static final String DEVICE_ID = "_id";
+    private static final String DEVICE_TYPE = "type";
     private static final String DEVICE_NAME = "name";
     private static final String DEVICE_MAC = "mac";
     private static final String DEVICE_DRIVER_ID = "driver";
@@ -32,6 +34,7 @@ public class DriverSQLiteDatabase  extends SQLiteOpenHelper implements DriverDat
     private static final String DEVICE_PTTDOWN_DELAY = "ptt_down_delay";
     private static final String TABLE_DEVICES_CREATE_SQL = "CREATE TABLE IF NOT EXISTS `" + TABLE_DEVICES + "` ("
             + "`" + DEVICE_ID + "` INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "`" + DEVICE_TYPE + "` TEXT NOT NULL,"
             + "`" + DEVICE_NAME + "` TEXT NOT NULL,"
             + "`" + DEVICE_MAC + "` TEXT NOT NULL UNIQUE,"
             + "`" + DEVICE_DRIVER_ID + "` INTEGER,"
@@ -70,6 +73,14 @@ public class DriverSQLiteDatabase  extends SQLiteOpenHelper implements DriverDat
         db.execSQL(TABLE_DRIVERS_CREATE_SQL);
     }
 
+    private void updateTableAddColumns(SQLiteDatabase db, String table, String[] columns) {
+        for (String column : columns) {
+            String updateTable = "ALTER TABLE `" + table + "` ADD COLUMN "
+                    + column + ";";
+            db.execSQL(updateTable);
+        }
+    }
+
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion <= DEVWATCH_ADD_AFTER_VER) {
@@ -78,11 +89,14 @@ public class DriverSQLiteDatabase  extends SQLiteOpenHelper implements DriverDat
                     "`" + DRIVER_WATCH_FOR_DEV + "` TEXT"
                 };
 
-            for (String column : columns) {
-                String updateDriverTable = "ALTER TABLE `" + TABLE_DRIVERS + "` ADD COLUMN "
-                        + column + ";";
-                db.execSQL(updateDriverTable);
-            }
+            updateTableAddColumns(db, TABLE_DRIVERS, columns);
+        }
+        if (oldVersion <= DEVTYPE_ADD_AFTER_VER) {
+            String[] columns = new String[] {
+                    "`" + DEVICE_TYPE + "` TEXT NOT NULL DEFAULT `bluetooth`"
+            };
+
+            updateTableAddColumns(db, TABLE_DEVICES, columns);
         }
     }
 
@@ -146,13 +160,14 @@ public class DriverSQLiteDatabase  extends SQLiteOpenHelper implements DriverDat
         List<Device> devices = new ArrayList<>();
         Cursor cursor = getReadableDatabase().query(
                 TABLE_DEVICES,
-                new String[]{ DEVICE_ID, DEVICE_NAME, DEVICE_MAC, DEVICE_DRIVER_ID,
+                new String[]{ DEVICE_ID, DEVICE_TYPE, DEVICE_NAME, DEVICE_MAC, DEVICE_DRIVER_ID,
                         DEVICE_AUTOCONNECT, DEVICE_AUTORECONNECT, DEVICE_PTTDOWN_DELAY },
                 null, null, null, null, null);
 
         cursor.moveToFirst();
         while (!cursor.isAfterLast()) {
             Device device = new Device(cursor.getInt(cursor.getColumnIndex(DEVICE_ID)),
+                    Device.DeviceType.toDeviceType(cursor.getString(cursor.getColumnIndex(DEVICE_TYPE))),
                     cursor.getString(cursor.getColumnIndex(DEVICE_NAME)),
                     cursor.getString(cursor.getColumnIndex(DEVICE_MAC)),
                     getInt(cursor, cursor.getColumnIndex(DEVICE_DRIVER_ID), -1),
@@ -170,7 +185,7 @@ public class DriverSQLiteDatabase  extends SQLiteOpenHelper implements DriverDat
 
     private Device getDeviceBy(String columnName, String value) {
         Cursor cursor = getReadableDatabase().query(TABLE_DEVICES,
-                new String[] { DEVICE_ID, DEVICE_NAME, DEVICE_MAC, DEVICE_DRIVER_ID,
+                new String[] { DEVICE_ID, DEVICE_TYPE, DEVICE_NAME, DEVICE_MAC, DEVICE_DRIVER_ID,
                         DEVICE_AUTOCONNECT, DEVICE_AUTORECONNECT, DEVICE_PTTDOWN_DELAY },
                 columnName + "=?",
                 new String[] { value }, null, null, null);
@@ -179,6 +194,7 @@ public class DriverSQLiteDatabase  extends SQLiteOpenHelper implements DriverDat
             return null;
 
         Device device = new Device(cursor.getInt(cursor.getColumnIndex(DEVICE_ID)),
+                Device.DeviceType.toDeviceType(cursor.getString(cursor.getColumnIndex(DEVICE_TYPE))),
                 cursor.getString(cursor.getColumnIndex(DEVICE_NAME)),
                 cursor.getString(cursor.getColumnIndex(DEVICE_MAC)),
                 getInt(cursor, cursor.getColumnIndex(DEVICE_DRIVER_ID), -1),
@@ -216,6 +232,7 @@ public class DriverSQLiteDatabase  extends SQLiteOpenHelper implements DriverDat
         ContentValues values = new ContentValues();
 
         values.put(DEVICE_NAME, device.getName());
+        values.put(DEVICE_TYPE, device.getDeviceType().toString());
         values.put(DEVICE_MAC, device.getMacAddress());
         values.put(DEVICE_DRIVER_ID, device.getDriverId());
         values.put(DEVICE_AUTOCONNECT, booleanToInt(device.getAutoConnect()));
@@ -240,6 +257,7 @@ public class DriverSQLiteDatabase  extends SQLiteOpenHelper implements DriverDat
         ContentValues values = new ContentValues();
 
         values.put(DEVICE_NAME, device.getName());
+        values.put(DEVICE_TYPE, device.getDeviceType().toString());
         values.put(DEVICE_MAC, device.getMacAddress());
         values.put(DEVICE_DRIVER_ID, device.getDriverId());
         values.put(DEVICE_AUTOCONNECT, booleanToInt(device.getAutoConnect()));

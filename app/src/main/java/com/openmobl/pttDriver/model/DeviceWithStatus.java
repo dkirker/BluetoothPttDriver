@@ -6,40 +6,40 @@ public class DeviceWithStatus extends Device {
     private boolean mConnected;
     private int mBatteryLevel;
 
-    public DeviceWithStatus(String name, String macAddress,
+    public DeviceWithStatus(DeviceType type, String name, String macAddress,
                   boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
-        super(name, macAddress, autoConnect, autoReconnect, pttDownDelay);
+        super(type, name, macAddress, autoConnect, autoReconnect, pttDownDelay);
 
         initialize();
     }
 
-    public DeviceWithStatus(int id, String name, String macAddress,
+    public DeviceWithStatus(int id, DeviceType type, String name, String macAddress,
                   boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
-        super(id, name, macAddress, autoConnect, autoReconnect, pttDownDelay);
+        super(id, type, name, macAddress, autoConnect, autoReconnect, pttDownDelay);
 
         initialize();
     }
-    public DeviceWithStatus(String name, String macAddress,
+    public DeviceWithStatus(DeviceType type, String name, String macAddress,
                   int driverId, boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
-        super(name, macAddress, driverId, autoConnect, autoReconnect, pttDownDelay);
+        super(type, name, macAddress, driverId, autoConnect, autoReconnect, pttDownDelay);
 
         initialize();
     }
-    public DeviceWithStatus(int id, String name, String macAddress,
+    public DeviceWithStatus(int id, DeviceType type, String name, String macAddress,
                   int driverId, boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
-        super(id, name, macAddress, driverId, autoConnect, autoReconnect, pttDownDelay);
+        super(id, type, name, macAddress, driverId, autoConnect, autoReconnect, pttDownDelay);
 
         initialize();
     }
-    public DeviceWithStatus(int id, String name, String macAddress,
+    public DeviceWithStatus(int id, DeviceType type, String name, String macAddress,
                   int driverId, String driverName, boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
-        super(id, name, macAddress, driverId, driverName, autoConnect, autoReconnect, pttDownDelay);
+        super(id, type, name, macAddress, driverId, driverName, autoConnect, autoReconnect, pttDownDelay);
 
         initialize();
     }
 
     public DeviceWithStatus(Device device) {
-        super(device.getId(), device.getName(), device.getMacAddress(),
+        super(device.getId(), device.getDeviceType(), device.getName(), device.getMacAddress(),
                 device.getDriverId(), device.getDriverName(),
                 device.getAutoConnect(), device.getAutoReconnect(), device.getPttDownDelay());
 

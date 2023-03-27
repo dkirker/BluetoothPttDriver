@@ -4,15 +4,17 @@ import android.content.Context;
 import android.net.Uri;
 import android.util.JsonReader;
 import android.util.JsonToken;
+import android.util.JsonWriter;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.arch.core.util.Function;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,15 +22,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public class PttDriver {
+public class PttDriver implements Validatable {
     private static final String TAG = PttDriver.class.getName();
 
     public enum ConnectionType {
         INVALID("-", "Invalid"),
         BLE("ble", "BLE"),
         BLE_SERIAL("ble-serial", "BLE Serial"),
+        BLE_GAIA("ble-gaia", "BLE GAIA"),
         SPP("spp", "Serial"),
-        HFP("hfp", "Hands-Free");
+        SPP_GAIA("spp-gaia", "GAIA Serial"),
+        HFP("hfp", "Hands-Free"),
+        FILESTREAM("filestream", "Local Filestream");
 
         private final String mConnectionType;
         private final String mTypeName;
@@ -82,7 +87,7 @@ public class PttDriver {
             return mDataType;
         }
     }
-    public class IntentMap extends HashMap<String, String> { }
+    public static class IntentMap extends HashMap<String, String> { }
 
     private JsonReader mReader;
 
@@ -206,7 +211,7 @@ public class PttDriver {
         return stringList;
     }
 
-    private IntentMap readIntentMap(JsonReader reader) throws IOException {
+    private static IntentMap readIntentMap(JsonReader reader) throws IOException {
         IntentMap intentMap = new IntentMap();
 
         reader.beginObject();
@@ -246,7 +251,8 @@ public class PttDriver {
         return intentMap;
     }
 
-    public Map<String, List<String>> getValidationErrors() {
+    @Override
+    public Map<String, List<String>> getAllValidationErrors() {
         HashMap<String, List<String>> results = new HashMap<>();
 
         results.put("driver", Collections.unmodifiableList(mValidationErrors));
@@ -257,6 +263,12 @@ public class PttDriver {
         return results;
     }
 
+    @Override
+    public List<String> getValidationErrors() {
+        return null;
+    }
+
+    @Override
     public boolean isValid() {
         boolean valid = true;
 
@@ -303,26 +315,38 @@ public class PttDriver {
     public PttReadObj getReadObj() { return mReadObj; }
 
     public String toJsonString() {
-        StringBuilder json = new StringBuilder();
+        StringWriter stringOut = new StringWriter();
+        JsonWriter writer = new JsonWriter(stringOut);
 
-        json.append("{");
+        toJson(writer);
 
-        json.append("\"name\":\"" + getDriverName() + "\",");
-        json.append("\"deviceName\":\"" + getDeviceName() + "\",");
+        return stringOut.toString();
+    }
+    public JsonWriter toJson(JsonWriter writer) {
+        try {
+            writer.beginObject();
 
-        if (getWatchForDeviceName() != null) {
-            json.append("\"watchForDeviceName\":\"" + getWatchForDeviceName() + "\",");
+            writer.name("name").value(getDriverName());
+            writer.name("deviceName").value(getDeviceName());
+
+            if (getWatchForDeviceName() != null) {
+                writer.name("watchForDeviceName").value(getWatchForDeviceName());
+            }
+
+            writer.name("type").value(getType().toString());
+            if (getWriteObj() != null) {
+                writer.name("write");
+                getWriteObj().toJson(writer);
+            }
+            writer.name("read");
+            getReadObj().toJson(writer);
+
+            writer.endObject();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-        json.append("\"type\":\"" + getType().toString() + "\",");
-        if (getWriteObj() != null) {
-            json.append("\"write\": " + getWriteObj().toJsonString() + ",");
-        }
-        json.append("\"read\":" + getReadObj().toJsonString());
-
-        json.append("}");
-
-        return json.toString();
+        return writer;
     }
 
     @NonNull
@@ -358,7 +382,7 @@ public class PttDriver {
         return builder.toString();
     }
 
-    public class PttWriteObj {
+    public static class PttWriteObj implements Validatable {
         private List<String> mValidationErrors;
 
         // Fields
@@ -437,10 +461,21 @@ public class PttDriver {
             reader.endObject();
         }
 
+        @Override
+        public Map<String, List<String>> getAllValidationErrors() {
+            HashMap<String, List<String>> result = new HashMap<>();
+
+            result.put("PttWriteObj", getValidationErrors());
+
+            return result;
+        }
+
+        @Override
         public List<String> getValidationErrors() {
             return Collections.unmodifiableList(mValidationErrors);
         }
 
+        @Override
         public boolean isValid() {
             mValidationErrors.clear();
 
@@ -507,45 +542,49 @@ public class PttDriver {
         }
 
         public String toJsonString() {
-            StringBuilder json = new StringBuilder();
-            ArrayList<String> params = new ArrayList<>();
+            StringWriter stringOut = new StringWriter();
+            JsonWriter writer = new JsonWriter(stringOut);
 
-            json.append("{");
+            toJson(writer);
 
-            if (getService() != null) {
-                params.add("\"service\":\"" + getService().toString() + "\"");
-            }
-            if (getCharacteristic() != null) {
-                params.add("\"characteristic\":\"" + getCharacteristic().toString() + "\"");
-            }
-            if (getStartCmdStr() != null) {
-                params.add("\"startCmdStr\":\"" + getStartCmdStr() + "\"");
-            }
-            if (getStartCmdStrType() != null) {
-                params.add("\"startCmdStrType\":\"" + getStartCmdStrType() + "\"");
-            }
+            return stringOut.toString();
+        }
+        public JsonWriter toJson(JsonWriter writer) {
+            try {
+                writer.beginObject();
 
-            if (getEOL() != null) {
-                params.add("\"eol\":\"" + getEOL() + "\"");
-            }
-            params.add("\"serialDataType\":\"" + getSerialDataType() + "\"");
-
-
-            if (getIntentMap() != null) {
-                ArrayList<String> intentMap = new ArrayList<>();
-
-                for (Map.Entry<String, String> mapping : getIntentMap().entrySet()) {
-                    intentMap.add("\"" + mapping.getKey() + "\":\"" + mapping.getValue() + "\"");
+                if (getService() != null) {
+                    writer.name("service").value(getService().toString());
+                }
+                if (getCharacteristic() != null) {
+                    writer.name("characteristic").value(getCharacteristic().toString());
+                }
+                if (getStartCmdStr() != null) {
+                    writer.name("startCmdStr").value(getStartCmdStr());
+                }
+                if (getStartCmdStrType() != null) {
+                    writer.name("startCmdStrType").value(getStartCmdStrType().toString());
                 }
 
-                params.add("\"intentMap\":{" + String.join(",", intentMap) + "}");
+                if (getEOL() != null) {
+                    writer.name("eol").value(getEOL());
+                }
+                writer.name("serialDataType").value(getSerialDataType().toString());
+
+                if (getIntentMap() != null) {
+                    writer.name("intentMap").beginObject();
+                    for (Map.Entry<String, String> mapping : getIntentMap().entrySet()) {
+                        writer.name(mapping.getKey()).value(mapping.getValue());
+                    }
+                    writer.endObject();
+                }
+
+                writer.endObject();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
-            json.append(String.join(",", params));
-
-            json.append("}");
-
-            return json.toString();
+            return writer;
         }
 
         @NonNull
@@ -553,21 +592,199 @@ public class PttDriver {
             return toStringBuilder(new StringBuilder(), "").toString();
         }
     }
-    public class PttReadObj {
+
+    public static class FileObject implements Validatable {
+        private List<String> mValidationErrors = new ArrayList<>();
+
+        private String mFilename;
+        private String mPreprocessFunc;
+        private IntentMap mIntentMap;
+
+        public FileObject(JsonReader reader) throws IOException {
+            read(reader);
+        }
+
+        public void read(@NonNull JsonReader reader) throws IOException {
+            reader.beginObject();
+            while (reader.hasNext()) {
+                String name = reader.nextName();
+
+                switch (name) {
+                    case "filename":
+                        mFilename = reader.nextString();
+                        Log.v(TAG, "Filename: " + mFilename);
+                        break;
+                    case "preprocess":
+                        mPreprocessFunc = reader.nextString();
+                        Log.v(TAG, "Filename: " + mPreprocessFunc);
+                        break;
+                    case "intentMap":
+                        if (reader.peek() != JsonToken.NULL) {
+                            Log.v(TAG, "Reading intent map");
+                            mIntentMap = readIntentMap(reader);
+                        } else {
+                            Log.v(TAG, "Could not read intent map");
+                        }
+                        break;
+                    default:
+                        Log.d(TAG, "Skipping parameter: " + name);
+                        reader.skipValue();
+                        break;
+                }
+            }
+            reader.endObject();
+        }
+
+        public String getFileName() {
+            return mFilename;
+        }
+
+        public String getPreprocessFunction() {
+            return mPreprocessFunc;
+        }
+
+        public IntentMap getIntentMap() {
+            return mIntentMap;
+        }
+
+        @Override
+        public Map<String, List<String>> getAllValidationErrors() {
+            HashMap<String, List<String>> result = new HashMap<>();
+
+            result.put("FileObject", getValidationErrors());
+
+            return result;
+        }
+
+        @Override
+        public List<String> getValidationErrors() {
+            return null;
+        }
+
+        @Override
+        public boolean isValid() {
+            boolean valid = true;
+
+            mValidationErrors.clear();
+
+            if (getFileName() == null) {
+                valid = false;
+                mValidationErrors.add("\'filename\' must not be null for a file object");
+            } else if (getFileName().isEmpty()) {
+                valid = false;
+                mValidationErrors.add("\'filename\' must not be empty");
+            }
+
+            if (getPreprocessFunction() == null) {
+                valid = false;
+                mValidationErrors.add("\'preprocess\' must not be null for a file object");
+            } else if (getPreprocessFunction().isEmpty()) {
+                valid = false;
+                mValidationErrors.add("\'preprocess\' must not be empty");
+            }
+
+            if (getIntentMap() == null) {
+                valid = false;
+                mValidationErrors.add("\'intentMap\' must not be null for a file object");
+            } else if (getIntentMap().isEmpty()) {
+                valid = false;
+                mValidationErrors.add("\'intentMap\' must not be empty");
+            }
+
+            return valid;
+        }
+
+        private StringBuilder toStringBuilder(StringBuilder builder, String linePrefix) {
+            if (builder == null) {
+                builder = new StringBuilder();
+            }
+
+            builder.append(linePrefix);
+            builder.append("filename (M): ");
+            builder.append(getFileName());
+            builder.append("\n");
+
+            builder.append(linePrefix);
+            builder.append("preprocess (M): ");
+            builder.append(getPreprocessFunction());
+            builder.append("\n");
+
+            if (getIntentMap() != null) {
+                builder.append(linePrefix);
+                builder.append("intentMap (M):\n");
+                for (Map.Entry<String, String> mapping : getIntentMap().entrySet()) {
+                    builder.append(linePrefix);
+                    builder.append("\t");
+                    builder.append(mapping.getKey());
+                    builder.append(": ");
+                    builder.append(mapping.getValue());
+                    builder.append("\n");
+                }
+            }
+
+            return builder;
+        }
+
+        public String toJsonString() {
+            StringWriter stringOut = new StringWriter();
+            JsonWriter writer = new JsonWriter(stringOut);
+
+            toJson(writer);
+
+            return stringOut.toString();
+        }
+        public JsonWriter toJson(JsonWriter writer) {
+            try {
+                writer.beginObject();
+
+                if (getFileName() != null) {
+                    writer.name("filename").value(getFileName());
+                }
+                if (getPreprocessFunction() != null) {
+                    writer.name("preprocess").value(getPreprocessFunction());
+                }
+
+                if (getIntentMap() != null) {
+                    writer.name("intentMap").beginObject();
+                    for (Map.Entry<String, String> mapping : getIntentMap().entrySet()) {
+                        writer.name(mapping.getKey()).value(mapping.getValue());
+                    }
+                    writer.endObject();
+                }
+
+                writer.endObject();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return writer;
+        }
+
+        @NonNull
+        public String toString() {
+            return toStringBuilder(new StringBuilder(), "").toString();
+        }
+    }
+
+    public class PttReadObj implements Validatable {
+        public class OperationsMap extends HashMap<String, String> { }
+
         private List<String> mValidationErrors;
 
         // Fields
-        private UUID mService;
-        private UUID mCharacteristic;
-        private String mEOL;
-        private DataType mSerialDataType;
-        private IntentMap mIntentMap;
-        private Map<UUID, IntentMap> mCharacteristicIntentMaps;
         private String mPttDownKeyIntent;
         private int mDefaultPttDownKeyDelay;
+        private DataType mSerialDataType;
+        private String mEOL;
+        private UUID mService;
+        private UUID mCharacteristic;
+        private IntentMap mIntentMap;
+        private Map<UUID, IntentMap> mCharacteristicIntentMaps;
         private boolean mDeDupe;
         private int mDeDupeTimeout;
         private List<String> mIntentsDeDuplicateNoTimeout;
+        private OperationsMap mOperationsMap;
+        private List<FileObject> mFiles;
 
         public PttReadObj() {
             mValidationErrors = new ArrayList<>();
@@ -630,7 +847,7 @@ public class PttDriver {
                         break;
                     case "eol":
                         mEOL = reader.nextString();
-                        Log.v(TAG, mEOL);
+                        Log.v(TAG, "EOL: " + mEOL);
                         break;
                     case "serialDataType":
                         mSerialDataType = DataType.toDataType(reader.nextString());
@@ -652,6 +869,22 @@ public class PttDriver {
                             Log.v(TAG, "Could not read characteristic intent maps");
                         }
                         break;
+                    case "operations":
+                        if (reader.peek() != JsonToken.NULL) {
+                            Log.v(TAG, "Reading operations map");
+                            mOperationsMap = readOperationsMap(reader);
+                        } else {
+                            Log.v(TAG, "Could not read operations map");
+                        }
+                        break;
+                    case "files":
+                        if (reader.peek() != JsonToken.NULL) {
+                            Log.v(TAG, "Reading files list");
+                            mFiles = readFilesList(reader);
+                        } else {
+                            Log.v(TAG, "Could not read files list");
+                        }
+                        break;
                     default:
                         Log.d(TAG, "Skipping parameter: " + name);
                         reader.skipValue();
@@ -659,6 +892,35 @@ public class PttDriver {
                 }
             }
             reader.endObject();
+        }
+
+        private OperationsMap readOperationsMap(JsonReader reader) throws IOException {
+            OperationsMap opsMap = new OperationsMap();
+
+            reader.beginObject();
+            while (reader.hasNext()) {
+                String name = reader.nextName();
+                String value = reader.nextString();
+
+                Log.v(TAG, "Operations mapping: " + name + " -> " + value);
+
+                opsMap.put(name, value);
+            }
+            reader.endObject();
+
+            return opsMap;
+        }
+
+        private List<FileObject> readFilesList(JsonReader reader) throws IOException {
+            ArrayList<FileObject> files = new ArrayList<>();
+
+            reader.beginArray();
+            while (reader.hasNext()) {
+                files.add(new FileObject(reader));
+            }
+            reader.endArray();
+
+            return files;
         }
 
         private boolean isCharacteristicIntentMapsEmpty() {
@@ -675,10 +937,21 @@ public class PttDriver {
             return empty;
         }
 
+        @Override
+        public Map<String, List<String>> getAllValidationErrors() {
+            HashMap<String, List<String>> result = new HashMap<>();
+
+            result.put("PttReadObj", getValidationErrors());
+
+            return result;
+        }
+
+        @Override
         public List<String> getValidationErrors() {
             return Collections.unmodifiableList(mValidationErrors);
         }
 
+        @Override
         public boolean isValid() {
             /*boolean typeValid = getType() != ConnectionType.BLE_SERIAL || (getService() != null && getCharacteristic() != null);
 
@@ -769,6 +1042,30 @@ public class PttDriver {
                         mValidationErrors.add("\'serialDataType\' must be \'ascii\' for type of \'hfp\'");
                     }
                     break;
+                case FILESTREAM:
+                    if (getOperationsMap() == null) {
+                        valid = false;
+                        mValidationErrors.add("\'operations\' must not be null for type of \'" + getType() + "\'");
+                    } else if (getOperationsMap().isEmpty()){
+                        valid = false;
+                        mValidationErrors.add("\'operations\' must not be empty");
+                    }
+
+                    if (getFiles() == null) {
+                        valid = false;
+                        mValidationErrors.add("\'files\' must not be null for type of \'" + getType() + "\'");
+                    } else if (getFiles().size() == 0) {
+                        valid = false;
+                        mValidationErrors.add("\'files\' must not be empty");
+                    } else {
+                        for (FileObject file: getFiles()) {
+                            if (!file.isValid()) {
+                                valid = false;
+                                mValidationErrors.addAll(file.getValidationErrors());
+                            }
+                        }
+                    }
+                    break;
             }
 
             return valid;
@@ -785,6 +1082,8 @@ public class PttDriver {
         public DataType getSerialDataType() { return mSerialDataType; }
         public IntentMap getIntentMap() { return mIntentMap; }
         public Map<UUID, IntentMap> getCharacteristicIntentMaps() { return mCharacteristicIntentMaps; }
+        public OperationsMap getOperationsMap() { return mOperationsMap; }
+        public List<FileObject> getFiles() { return mFiles; }
 
         private StringBuilder toStringBuilder(StringBuilder builder, String linePrefix) {
             if (builder == null) {
@@ -836,9 +1135,9 @@ public class PttDriver {
             builder.append(getSerialDataType());
             builder.append("\n");
 
+            builder.append(linePrefix);
+            builder.append("characteristicMaps ():\n");
             if (getCharacteristicIntentMaps() != null) {
-                builder.append(linePrefix);
-                builder.append("characteristicMaps (M):\n");
                 for (Map.Entry<UUID, IntentMap> mapping : getCharacteristicIntentMaps().entrySet()) {
                     builder.append(linePrefix);
                     builder.append("\t");
@@ -854,9 +1153,14 @@ public class PttDriver {
                         builder.append("\n");
                     }
                 }
-            } else if (getIntentMap() != null) {
-                builder.append(linePrefix);
-                builder.append("intentMap (M):\n");
+            } else {
+                builder.append("null\n");
+                builder.append("\n");
+            }
+
+            builder.append(linePrefix);
+            builder.append("intentMap ():\n");
+            if (getIntentMap() != null) {
                 for (Map.Entry<String, String> mapping : getIntentMap().entrySet()) {
                     builder.append(linePrefix);
                     builder.append("\t");
@@ -865,75 +1169,184 @@ public class PttDriver {
                     builder.append(mapping.getValue());
                     builder.append("\n");
                 }
+            } else {
+                builder.append("null\n");
+                builder.append("\n");
+            }
+
+            builder.append(linePrefix);
+            builder.append("operations (M for FILESTREAM): ");
+            if (getOperationsMap() != null) {
+                for (Map.Entry<String, String> operation: getOperationsMap().entrySet()) {
+                    builder.append(linePrefix);
+                    builder.append("\t");
+                    builder.append(operation.getKey());
+                    builder.append(": '");
+                    builder.append(operation.getValue());
+                    builder.append("'\n");
+                }
+            } else {
+                builder.append("null\n");
+                builder.append("\n");
+            }
+
+            builder.append(linePrefix);
+            builder.append("files (M for FILESTREAM): ");
+            if (getFiles() != null) {
+                for (FileObject file: getFiles()) {
+                    builder.append(file.toStringBuilder(builder, linePrefix));
+                }
+            } else {
+                builder.append("null\n");
+                builder.append("\n");
             }
 
             return builder;
         }
 
         public String toJsonString() {
-            StringBuilder json = new StringBuilder();
-            ArrayList<String> params = new ArrayList<>();
+            StringWriter stringOut = new StringWriter();
+            JsonWriter writer = new JsonWriter(stringOut);
 
-            json.append("{");
+            toJson(writer);
 
-            if (getService() != null) {
-                params.add("\"service\":\"" + getService().toString() + "\"");
-            }
-            if (getCharacteristic() != null) {
-                params.add("\"characteristic\":\"" + getCharacteristic().toString() + "\"");
-            }
+            return stringOut.toString();
+        }
+        public JsonWriter toJson(JsonWriter writer) {
+            try {
+                writer.beginObject();
 
-            params.add("\"pttDownKeyIntent\":\"" + getPttDownKeyIntent() + "\"");
-            params.add("\"defaultPttDownKeyDelay\":" + getDefaultPttDownKeyDelay());
-            params.add("\"intentDeDuplicate\":" + getIntentDeDuplicate());
-            params.add("\"intentDeDuplicateTimeout\":" + getIntentDeDuplicateTimeout());
+                if (getService() != null) {
+                    writer.name("service").value(getService().toString());
+                }
+                if (getCharacteristic() != null) {
+                    writer.name("characteristic").value(getCharacteristic().toString());
+                }
 
-            List<String> jsonStringArray = new ArrayList<>();
-            for (String value : getIntentsDeDuplicateNoTimeout()) {
-                jsonStringArray.add("\"" +  value + "\"");
-            }
+                writer.name("pttDownKeyIntent").value(getPttDownKeyIntent());
+                writer.name("defaultPttDownKeyDelay").value(getDefaultPttDownKeyDelay());
+                writer.name("intentDeDuplicate").value(getIntentDeDuplicate());
+                writer.name("intentDeDuplicateTimeout").value(getIntentDeDuplicateTimeout());
 
-            params.add("\"intentsDeDuplicateNoTimeout\":[" + String.join(",", jsonStringArray) + "]");
-            if (getEOL() != null) {
-                params.add("\"eol\":\"" + getEOL() + "\"");
-            }
-            params.add("\"serialDataType\":\"" + getSerialDataType() + "\"");
+                writer.name("intentsDeDuplicateNoTimeout").beginArray();
+                for (String value : getIntentsDeDuplicateNoTimeout()) {
+                    writer.value(value);
+                }
+                writer.endArray();
 
+                if (getEOL() != null) {
+                    writer.name("eol").value(getEOL());
+                }
+                writer.name("serialDataType").value(getSerialDataType().toString());
 
-            if (getCharacteristicIntentMaps() != null) {
-                ArrayList<String> charIntentMaps = new ArrayList<>();
-
-                for (Map.Entry<UUID, IntentMap> mapping : getCharacteristicIntentMaps().entrySet()) {
-                    ArrayList<String> intentMap = new ArrayList<>();
-
-                    for (Map.Entry<String, String> subMapping : mapping.getValue().entrySet()) {
-                        intentMap.add("\"" + subMapping.getKey() + "\":\"" + subMapping.getValue() + "\"");
+                if (getCharacteristicIntentMaps() != null) {
+                    writer.name("characteristicMaps").beginObject();
+                    for (Map.Entry<UUID, IntentMap> mapping : getCharacteristicIntentMaps().entrySet()) {
+                        writer.name(mapping.getKey().toString()).beginObject();
+                        for (Map.Entry<String, String> subMapping : mapping.getValue().entrySet()) {
+                            writer.name(subMapping.getKey()).value(subMapping.getValue());
+                        }
+                        writer.endObject();
                     }
-
-                    charIntentMaps.add("\"" + mapping.getKey() + "\":{" + String.join(",", intentMap) + "}");
+                    writer.endObject();
+                } else if (getIntentMap() != null) {
+                    writer.name("intentMap").beginObject();
+                    for (Map.Entry<String, String> mapping : getIntentMap().entrySet()) {
+                        writer.name(mapping.getKey()).value(mapping.getValue());
+                    }
+                    writer.endObject();
                 }
 
-                params.add("\"characteristicMaps\":{" + String.join(",", charIntentMaps) + "}");
-            } else if (getIntentMap() != null) {
-                ArrayList<String> intentMap = new ArrayList<>();
-
-                for (Map.Entry<String, String> mapping : getIntentMap().entrySet()) {
-                    intentMap.add("\"" + mapping.getKey() + "\":\"" + mapping.getValue() + "\"");
+                if (getOperationsMap() != null) {
+                    writer.name("operations").beginObject();
+                    for (Map.Entry<String, String> mapping : getOperationsMap().entrySet()) {
+                        writer.name(mapping.getKey()).value(mapping.getValue());
+                    }
+                    writer.endObject();
                 }
 
-                params.add("\"intentMap\":{" + String.join(",", intentMap) + "}");
+                if (getFiles() != null) {
+                    writer.name("files").beginArray();
+                    for (FileObject file: getFiles()) {
+                        file.toJson(writer);
+                    }
+                    writer.endArray();
+                }
+
+                writer.endObject();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
-            json.append(String.join(",", params));
-
-            json.append("}");
-
-            return json.toString();
+            return writer;
         }
 
         @NonNull
         public String toString() {
             return toStringBuilder(new StringBuilder(), "").toString();
         }
+    }
+
+    public static String escapeJsonString(String value) {
+        try {
+            Writer out = new StringWriter();
+
+            for (int i = 0, length = value.length(); i < length; i++) {
+                char c = value.charAt(i);
+                /*
+                 * From RFC 4627, "All Unicode characters may be placed within the
+                 * quotation marks except for the characters that must be escaped:
+                 * quotation mark, reverse solidus, and the control characters
+                 * (U+0000 through U+001F)."
+                 *
+                 * We also escape '\u2028' and '\u2029', which JavaScript interprets
+                 * as newline characters. This prevents eval() from failing with a
+                 * syntax error.
+                 * http://code.google.com/p/google-gson/issues/detail?id=341
+                 */
+                switch (c) {
+                    case '"':
+                    case '\\':
+                        out.write('\\');
+                        out.write(c);
+                        break;
+                    case '\t':
+                        out.write("\\t");
+                        break;
+                    case '\b':
+                        out.write("\\b");
+                        break;
+                    case '\n':
+                        out.write("\\n");
+                        break;
+                    case '\r':
+                        out.write("\\r");
+                        break;
+                    case '\f':
+                        out.write("\\f");
+                        break;
+                    case '\u2028':
+                    case '\u2029':
+                        out.write(String.format("\\u%04x", (int) c));
+                        break;
+                    default:
+                        if (c <= 0x1F) {
+                            out.write(String.format("\\u%04x", (int) c));
+                        } else {
+                            out.write(c);
+                        }
+                        break;
+                }
+            }
+
+            String result = out.toString();
+
+            Log.v(TAG, "escaped: " + result);
+
+            return result;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
     }
 }

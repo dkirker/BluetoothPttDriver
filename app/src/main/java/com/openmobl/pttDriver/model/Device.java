@@ -9,7 +9,35 @@ import androidx.annotation.NonNull;
 public class Device implements Record, Parcelable {
     private static final String TAG = Device.class.getName();
 
+    public enum DeviceType {
+        INVALID("-"),
+        BLUETOOTH("bluetooth"),
+        LOCAL("local");
+
+        private final String mType;
+
+        DeviceType(final String type) {
+            mType = type;
+        }
+        public static DeviceType toDeviceType(String value) {
+            for (DeviceType typeEnum : values()) {
+                if (value.equals(typeEnum.toString()))
+                    return typeEnum;
+            }
+            return INVALID;
+        }
+        public boolean isValid() {
+            return this != INVALID;
+        }
+        @NonNull
+        @Override
+        public String toString() {
+            return mType;
+        }
+    }
+
     private int mId;
+    private DeviceType mDeviceType;
     private String mName;
     private String mMacAddress;
     private String mDriverName;
@@ -31,9 +59,10 @@ public class Device implements Record, Parcelable {
         }
     };
 
-    public Device(String name, String macAddress,
+    public Device(DeviceType type, String name, String macAddress,
                   boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
         mId = -1;
+        mDeviceType = type;
         mName = name;
         mMacAddress = macAddress;
         mDriverId = -1;
@@ -43,27 +72,27 @@ public class Device implements Record, Parcelable {
         mPttDownDelay = pttDownDelay;
     }
 
-    public Device(int id, String name, String macAddress,
+    public Device(int id, DeviceType type, String name, String macAddress,
                   boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
-        this(name, macAddress, autoConnect, autoReconnect, pttDownDelay);
+        this(type, name, macAddress, autoConnect, autoReconnect, pttDownDelay);
 
         mId = id;
     }
-    public Device(String name, String macAddress,
+    public Device(DeviceType type, String name, String macAddress,
                   int driverId, boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
-        this(name, macAddress, autoConnect, autoReconnect, pttDownDelay);
+        this(type, name, macAddress, autoConnect, autoReconnect, pttDownDelay);
 
         mDriverId = driverId;
     }
-    public Device(int id, String name, String macAddress,
+    public Device(int id, DeviceType type, String name, String macAddress,
                   int driverId, boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
-        this(id, name, macAddress, autoConnect, autoReconnect, pttDownDelay);
+        this(id, type, name, macAddress, autoConnect, autoReconnect, pttDownDelay);
 
         mDriverId = driverId;
     }
-    public Device(int id, String name, String macAddress,
+    public Device(int id, DeviceType type, String name, String macAddress,
                   int driverId, String driverName, boolean autoConnect, boolean autoReconnect, int pttDownDelay) {
-        this(id, name, macAddress, driverId, autoConnect, autoReconnect, pttDownDelay);
+        this(id, type, name, macAddress, driverId, autoConnect, autoReconnect, pttDownDelay);
 
         mDriverName = driverName;
     }
@@ -76,6 +105,7 @@ public class Device implements Record, Parcelable {
 
     @Override
     public int getId() { return mId; }
+    public DeviceType getDeviceType() { return mDeviceType; }
     @Override
     public String getName() { return mName; }
     public String getMacAddress() { return mMacAddress; }
@@ -105,6 +135,7 @@ public class Device implements Record, Parcelable {
     @Override
     public void writeToParcel(Parcel parcel, int flags) {
         parcel.writeInt(mId);
+        parcel.writeString(mDeviceType.toString());
         parcel.writeString(mName);
         parcel.writeString(mMacAddress);
         parcel.writeInt(mDriverId);
@@ -121,6 +152,7 @@ public class Device implements Record, Parcelable {
 
     private void readFromParcel(Parcel parcel) {
         mId = parcel.readInt();
+        mDeviceType = DeviceType.toDeviceType(parcel.readString());
         mName = parcel.readString();
         mMacAddress = parcel.readString();
         mDriverId = parcel.readInt();
@@ -142,7 +174,7 @@ public class Device implements Record, Parcelable {
     }
 
     public String toStringFull() {
-        return "Device(" + getId() + ", " + getName() + ", " + getMacAddress() +
+        return "Device(" + getId() + ", " + getDeviceType() + ", " + getName() + ", " + getMacAddress() +
                     ", " + getDriverId() + ", " + getDriverName() + ", " +
                     getAutoConnect() + ", " + getAutoReconnect() + ", " + getPttDownDelay() + ")";
     }

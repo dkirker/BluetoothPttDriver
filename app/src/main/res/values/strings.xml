@@ -6,6 +6,9 @@
     <string name="driver">Driver</string>
     <string name="drivers">Drivers</string>
 
+    <string name="this_device">This device</string>
+
+    <string name="label_device_type">Type:</string>
     <string name="label_driver">Driver:</string>
     <string name="label_device_name">Device Name:</string>
     <string name="label_device_mac">MAC Address:</string>
@@ -17,6 +20,9 @@
     <string name="cancel">Cancel</string>
     <string name="edit">Edit</string>
     <string name="delete">Delete</string>
+
+    <string name="bluetooth">Bluetooth</string>
+    <string name="local">Local</string>
 
     <string name="bt_devices">Bluetooth Devices</string>
 
@@ -35,12 +41,16 @@
     <string name="edit_device">Update device</string>
     <string name="select_device">Select device</string>
     <string name="no_device">No device</string>
+    <string name="select_device_type">Select device type</string>
     <string name="auto_connect">Auto connect</string>
     <string name="auto_reconnect">Auto reconnect</string>
     <string name="label_ptt_down_key_delay_ms">PTT Down key delay (milliseconds):</string>
     <string name="label_unit_ms">ms</string>
 
     <string name="background_service">Background service</string>
+    <string name="bluetooth_background_service">Bluetooth background service</string>
+    <string name="filestream_background_service">Local device background service</string>
+
     <string name="connecting_to_prefix">Connecting to </string>
     <string name="connected_to_prefix">Connected to </string>
     <string name="connect">Connect</string>

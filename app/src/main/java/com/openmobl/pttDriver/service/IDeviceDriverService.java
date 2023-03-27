@@ -2,28 +2,22 @@ package com.openmobl.pttDriver.service;
 
 import android.bluetooth.BluetoothDevice;
 
+import com.openmobl.pttDriver.model.Device;
 import com.openmobl.pttDriver.model.PttDriver;
 
 public interface IDeviceDriverService {
-    void setPttDevice(BluetoothDevice device);
-    void setPttWatchForDevice(BluetoothDevice device);
-    void setPttWatchForDevice(String name);
+    void setPttDevice(Device device);
+    boolean deviceIsValid();
 
     void setPttDriver(PttDriver driver);
-
-    void setConnectOnComplete(boolean connectOnComplete);
-    boolean getConnectOnComplete();
 
     void setAutomaticallyReconnect(boolean autoReconnect);
     boolean getAutomaticallyReconnect();
 
-    void setPttDownKeyDelay(int delay);
-    int getPttDownKeyDelay();
+    void registerStatusListener(DeviceStatusListener statusListener);
+    void unregisterStatusListener(DeviceStatusListener statusListener);
 
-    void registerStatusListener(DeviceDriverService.DeviceStatusListener statusListener);
-    void unregisterStatusListener(DeviceDriverService.DeviceStatusListener statusListener);
-
-    DeviceDriverService.Connected getConnected();
+    DeviceConnectionState getConnectionState();
 
     void connect();
     void disconnect();

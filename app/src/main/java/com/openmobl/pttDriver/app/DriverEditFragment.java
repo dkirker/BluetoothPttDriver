@@ -211,7 +211,7 @@ public class DriverEditFragment extends DialogFragment {
 
                     UIUtils.showDriverValidationError(requireContext(),
                             requireContext().getString(R.string.driver_select_failed),
-                            driver.getValidationErrors());
+                            driver.getAllValidationErrors());
                 }
             } catch (Exception e) {
                 Log.d(TAG, "Failed to open driver file. Received exception: " + e);

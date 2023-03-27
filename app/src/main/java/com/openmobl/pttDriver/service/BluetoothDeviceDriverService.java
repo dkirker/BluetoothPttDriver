@@ -3,10 +3,12 @@ package com.openmobl.pttDriver.service;
 import static android.app.PendingIntent.FLAG_CANCEL_CURRENT;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 
+import com.openmobl.pttDriver.BuildConfig;
 import com.openmobl.pttDriver.Constants;
 import com.openmobl.pttDriver.R;
 import com.openmobl.pttDriver.bt.HfpSerialSocket;
 import com.openmobl.pttDriver.bt.hfp.AtCommandResult;
+import com.openmobl.pttDriver.model.Device;
 import com.openmobl.pttDriver.model.PttDriver;
 import com.openmobl.pttDriver.bt.BleDeviceDelegate;
 import com.openmobl.pttDriver.bt.BleSerialSocket;
@@ -26,64 +28,36 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
 
+import androidx.annotation.Nullable;
 import androidx.core.app.NotificationChannelCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * show list of BLE devices
- */
-public class DeviceDriverService extends Service implements IDeviceDriverService, SerialListener {
-    private static final String TAG = DeviceDriverService.class.getName();
+public class BluetoothDeviceDriverService extends Service implements IDeviceDriverService, SerialListener {
+    private static final String TAG = BluetoothDeviceDriverService.class.getName();
 
     // If we stay connected for more than two minutes, we can reset the reset count
     private static final long RECONNECT_COUNT_RESET_MILLI = 120000;
     // If we try to reconnect more than this many times reset the count which resets the back-off delay
     private static final long RECONNECT_COUNT_RESET_AFTER = 60;
 
-    public interface DeviceStatusListener {
-        void onStatusMessageUpdate(String message);
-
-        void onConnected();
-        void onDisconnected();
-
-        void onBatteryEvent(byte level);
-    }
-
-    public enum Connected { False, Pending, True }
-
-    public static class DeviceDriverBinder extends Binder {
-        private final DeviceDriverService mService;
-
-        private DeviceDriverBinder(DeviceDriverService service) {
-            mService = service;
-        }
-
-        public IDeviceDriverService getService() {
-            return mService;
-        }
-    }
-
-    private Connected mConnected = Connected.False;
+    private DeviceConnectionState mConnectionState = DeviceConnectionState.Disconnected;
     private boolean mEnabledSent = false;
     private long mReconnectCount;
     private Date mLastReconnectAttempt;
@@ -100,26 +74,28 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
     private boolean mAutomaticallyReconnect;
     private int mPttDownKeyDelay;
     private boolean mPttDownKeyDelayOverride;
+
     private NotificationCompat.Builder mNotificationBuilder;
-    private Map<BluetoothDevice, String> mConnectionState;
+
+    private Map<BluetoothDevice, String> mBtDeviceConnectionState;
     private final BroadcastReceiver mDeviceConnectReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 
-            mConnectionState.put(device, action);
+            mBtDeviceConnectionState.put(device, action);
 
 
             if (mPttDevice != null && device.getAddress().equals(mPttDevice.getAddress())) {
                 if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
                     Log.v(TAG, "Our device " + device.getAddress() + " has reconnected, reconnect to service");
-                    if (mConnected != Connected.True)
+                    if (mConnectionState != DeviceConnectionState.Connected)
                         reconnectAutomatically();
                 } /*else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) {
                     Log.v(TAG, "Our device " + device.getAddress() + " has disconnected, clean up");
                     disconnect();
-                }else if (BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED.equals(action)) {
+                } else if (BluetoothDevice.ACTION_ACL_DISCONNECT_REQUESTED.equals(action)) {
                     Log.v(TAG, "Our device " + device.getAddress() + " has requested to disconnect");
                     //Device is about to disconnect
                     //disconnect();
@@ -150,6 +126,8 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
         super.onCreate();
         Log.v(TAG, "onCreate");
 
+        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+
         mReconnectTimerHandler = new Handler(getMainLooper());
 
         createNotification(getString(R.string.status_disconnected));
@@ -159,7 +137,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
         mPttDownKeyDelay = 0;
         mPttDownKeyDelayOverride = false;
 
-        mConnectionState = new HashMap<>();
+        mBtDeviceConnectionState = new HashMap<>();
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
@@ -171,7 +149,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
     @Override
     public void onDestroy() {
         Log.v(TAG, "onDestroy");
-        if (mConnected != Connected.False)
+        if (mConnectionState != DeviceConnectionState.Disconnected)
             disconnect();
 
         try {
@@ -185,29 +163,43 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
         super.onDestroy();
     }
 
+    @Nullable
     @Override
     public IBinder onBind(Intent intent) {
         Log.v(TAG, "onBind");
-        return new DeviceDriverBinder(this);
+        return new DeviceDriverServiceBinder(this);
     }
 
     /*
         PTT Device parameters
      */
     @Override
-    public void setPttDevice(BluetoothDevice device) {
+    public void setPttDevice(Device device) {
         Log.v(TAG, "setPttDevice");
+        if (device != null) {
+            BluetoothManager btManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
+            BluetoothAdapter btAdapter = btManager.getAdapter();
 
-        mPttDevice = device;
-        checkConnectOnComplete();
+            mPttDevice = btAdapter.getRemoteDevice(device.getMacAddress());
+
+            mPttDownKeyDelay = device.getPttDownDelay();
+            mPttDownKeyDelayOverride = true;
+
+            checkConnectOnComplete();
+        } else {
+            mPttDevice = null;
+        }
     }
-    // TODO: A separate device to watch for connecting
     @Override
+    public boolean deviceIsValid() {
+        return mPttDevice != null;
+    }
+
+    // TODO: A separate device to watch for connecting
     public void setPttWatchForDevice(BluetoothDevice device) {
         mPttWatchForDevice = device;
         //checkConnectOnComplete();
     }
-    @Override
     public void setPttWatchForDevice(String name) {
         try {
             //BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -221,6 +213,10 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
                     setPttWatchForDevice(device);
                 }
             }
+        } catch (SecurityException sec) {
+            Log.d(TAG, "Received SecurityException -- BT permission not granted");
+            sec.printStackTrace();
+            // Display error.... or better transmit it
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -271,13 +267,11 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
     }
     // Connect on complete signals the device driver to connect to the device when all necessary fields
     // have been set and are valid.
-    @Override
     public void setConnectOnComplete(boolean connectOnComplete) {
         mConnectOnComplete = connectOnComplete;
 
         checkConnectOnComplete();
     }
-    @Override
     public boolean getConnectOnComplete() { return mConnectOnComplete; }
 
     private void checkConnectOnComplete() {
@@ -296,12 +290,10 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
     @Override
     public boolean getAutomaticallyReconnect() { return mAutomaticallyReconnect; }
 
-    @Override
     public void setPttDownKeyDelay(int delay) {
         mPttDownKeyDelay = delay;
         mPttDownKeyDelayOverride = true;
     }
-    @Override
     public int getPttDownKeyDelay() { return mPttDownKeyDelay; }
 
     @Override
@@ -331,28 +323,30 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
     }
 
     @Override
-    public Connected getConnected() {
-        return mConnected;
+    public DeviceConnectionState getConnectionState() {
+        return mConnectionState;
     }
 
     @Override
     public void connect() {
         Log.v(TAG, "connect()");
 
-        if (mConnected == Connected.False) {
+        if (mConnectionState == DeviceConnectionState.Disconnected) {
             status(R.string.status_connecting_to_device);
             try {
                 //BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
                 //BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceAddress);
                 status(R.string.status_connecting);
-                mConnected = Connected.Pending;
+                mConnectionState = DeviceConnectionState.Pending;
 
                 switch (mPttDriver.getType()) {
                     case BLE:
                     case BLE_SERIAL:
+                    case BLE_GAIA:
                         mSocket = new BleSerialSocket(this, mPttDevice, mPttDeviceDelegate);
                         break;
                     case SPP:
+                    case SPP_GAIA:
                         mSocket = new SppSerialSocket(this, mPttDevice);
                         break;
                     case HFP:
@@ -370,14 +364,14 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
                 onSerialConnectError(e);
             }
         } else {
-            Log.d(TAG, "State is not disconnected -- " + mConnected);
+            Log.d(TAG, "State is not disconnected -- " + mConnectionState);
         }
     }
 
     @Override
     public void disconnect() {
         status(R.string.status_disconnecting);
-        mConnected = Connected.False;
+        mConnectionState = DeviceConnectionState.Disconnected;
         mEnabledSent = false;
 
         createNotification(getString(R.string.status_disconnected));
@@ -388,8 +382,8 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
         }
     }
 
-    public void write(byte[] data) throws IOException {
-        if (mConnected == Connected.False)
+    private void write(byte[] data) throws IOException {
+        if (mConnectionState == DeviceConnectionState.Disconnected)
             throw new IOException("not connected");
         mSocket.write(data);
     }
@@ -405,7 +399,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
     @Override
     public void onSerialConnect(UUID service, UUID characteristic) {
         status(R.string.status_connected);
-        mConnected = Connected.True;
+        mConnectionState = DeviceConnectionState.Connected;
 
         createNotification(mSocket != null ? getString(R.string.connected_to_prefix) + " " + getDeviceName() : getString(R.string.background_service));
 
@@ -497,7 +491,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
     public void onSerialConnectError(Exception e) {
         status(getString(R.string.status_prefix_connection_failed) + " " + e.getMessage());
 
-        mConnected = Connected.False;
+        mConnectionState = DeviceConnectionState.Disconnected;
 
         if (mStatusListener != null) {
             mStatusListener.onDisconnected();
@@ -512,7 +506,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
         status(R.string.status_disconnected);
 
         mEnabledSent = false;
-        mConnected = Connected.False;
+        mConnectionState = DeviceConnectionState.Disconnected;
 
         createNotification(getString(R.string.status_disconnected));
 
@@ -539,7 +533,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
     }
 
     private boolean deviceIsConnected(BluetoothDevice device) {
-        String state = device != null ? mConnectionState.get(device) : null;
+        String state = device != null ? mBtDeviceConnectionState.get(device) : null;
 
         Log.v(TAG, "deviceIsConnected bluetooth device state: " + state);
 
@@ -553,7 +547,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
     private boolean deviceIsConnected(String macAddress) {
         BluetoothDevice device = null;
 
-        for (BluetoothDevice dev : mConnectionState.keySet()) {
+        for (BluetoothDevice dev : mBtDeviceConnectionState.keySet()) {
             if (macAddress.equals(dev.getAddress())) {
                 device = dev;
             }
@@ -741,6 +735,9 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
                     intentName = pttCharacteristicsIntentMap.get(characteristic).get(key);
                 }
             }
+        } else if (mPttDriver.getType() == PttDriver.ConnectionType.BLE_GAIA ||
+                    mPttDriver.getType() == PttDriver.ConnectionType.SPP_GAIA) {
+
         }
 
         if (intentName != null) {
@@ -761,7 +758,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
         status(getString(R.string.status_prefix_connection_lost) + " " + e.getMessage());
         disconnect();
 
-        mConnected = Connected.False;
+        mConnectionState = DeviceConnectionState.Disconnected;
 
         // Are we actually "disconnected"?
         createNotification(getString(R.string.status_disconnected));
@@ -775,7 +772,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
 
     @Override
     public void onBatteryEvent(byte level) {
-        if (mConnected != Connected.False) {
+        if (mConnectionState != DeviceConnectionState.Disconnected) {
             createNotification(
                     (mSocket != null ? getString(R.string.connected_to_prefix) + " " + getDeviceName() : getString(R.string.background_service)) +
                             " - " + getString(R.string.battery_prefix) + " " + level + "%");
@@ -791,19 +788,12 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
         NotificationManagerCompat manager = NotificationManagerCompat.from(this);
         boolean newNotif = false;
 
-        /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel nc = new NotificationChannel(Constants.NOTIFICATION_CHANNEL, "Background service", NotificationManager.IMPORTANCE_LOW);
-            nc.setShowBadge(false);
-            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            nm.createNotificationChannel(nc);
-        }*/
-
         if (mNotificationBuilder == null) {
             newNotif = true;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                channelId = Constants.NOTIFICATION_CHANNEL;
-                String channelName = getString(R.string.background_service);
+                channelId = BuildConfig.APPLICATION_ID + "." + BluetoothDeviceDriverService.class.getName();
+                String channelName = getString(R.string.bluetooth_background_service);
                 NotificationChannelCompat chan = new NotificationChannelCompat.Builder(channelId,
                         NotificationManagerCompat.IMPORTANCE_LOW)
                         .setName(channelName)
@@ -821,7 +811,7 @@ public class DeviceDriverService extends Service implements IDeviceDriverService
                 reconnectIntent, FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE);
 
         mNotificationBuilder.clearActions();
-        if (mConnected != Connected.False) {
+        if (mConnectionState != DeviceConnectionState.Disconnected) {
             mNotificationBuilder.addAction(new NotificationCompat.Action(R.drawable.ic_clear_white_24dp,
                     getString(R.string.disconnect), disconnectPendingIntent));
         } else {

@@ -15,70 +15,50 @@ import com.openmobl.pttDriver.db.DriverSQLiteDatabase;
 import com.openmobl.pttDriver.model.Device;
 import com.openmobl.pttDriver.model.Driver;
 import com.openmobl.pttDriver.model.ModelDataAction;
-import com.openmobl.pttDriver.model.ModelDataActionEventListener;
 import com.openmobl.pttDriver.model.PttDriver;
 import com.openmobl.pttDriver.model.Record;
-import com.openmobl.pttDriver.service.DeviceDriverService;
+import com.openmobl.pttDriver.service.DeviceConnectionState;
+import com.openmobl.pttDriver.service.DeviceDriverServiceManager;
+import com.openmobl.pttDriver.service.DeviceDriverServiceManager.DeviceDriverServiceHolder;
+import com.openmobl.pttDriver.service.DeviceStatusListener;
 import com.openmobl.pttDriver.service.IDeviceDriverService;
 
 import com.openmobl.pttDriver.databinding.ActivityMainBinding;
 
 import android.Manifest;
-import android.app.Activity;
-//import android.app.AlertDialog;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothManager;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.IBinder;
-import android.text.Editable;
+import android.os.Handler;
 import android.text.Html;
-import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.activity.result.ActivityResult;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager.widget.ViewPager;
 
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.textfield.TextInputEditText;
 import com.openmobl.pttDriver.utils.ServiceUtils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 //@RequiresApi(api = Build.VERSION_CODES.P)
-public class MainActivity extends AppCompatActivity implements DeviceDriverService.DeviceStatusListener,
+public class MainActivity extends AppCompatActivity implements DeviceStatusListener,
         DriverEditFragment.DriverEditListener, DeviceEditFragment.DeviceEditListener {
     private static final String TAG = MainActivity.class.getName();
-
-    private static final String SELECT_DEVICE_ACTION = "android.bluetooth.devicepicker.action.LAUNCH";
-    private static final String SELECT_DEVICE_SELECTED = "android.bluetooth.devicepicker.action.DEVICE_SELECTED";
 
     private final String[] PERMISSIONS = {
             Manifest.permission.FOREGROUND_SERVICE,
@@ -92,14 +72,6 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
     private Menu mMenu;
     private MenuItem mMenuConnect;
     private MenuItem mMenuDisconnect;
-    private MaterialButton mDeviceButton;
-    private TextView mDeviceLabel;
-    private MaterialButton mDriverButton;
-    private TextView mDriverLabel;
-    private TextView mStatusText;
-    private CheckBox mAutoConnect;
-    private CheckBox mAutoReconnect;
-    private TextInputEditText mPttDownKeyDelayInput;
     private ExtendedFloatingActionButton mEfabAdd;
     private FloatingActionButton mFabAddDevice;
     private TextView mTextAddDevice;
@@ -115,19 +87,16 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
     private DevicesViewModel mDevicesViewModel;
     private DriversViewModel mDriversViewModel;
 
-    private Uri mPttDriverPath;
-    private PttDriver mPttDriver;
-    private BluetoothDevice mPttDevice;
-    private IDeviceDriverService mService;
+    private DeviceDriverServiceManager mDeviceServiceManager;
+
+    /*private IDeviceDriverService mService;
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.v(TAG, "onServiceConnected");
-            mService = ((DeviceDriverService.DeviceDriverBinder) service).getService();
+            mService = ((DeviceDriverServiceBinder)service).getService();
 
             mService.registerStatusListener(MainActivity.this);
-            //mService.setConnectOnComplete(true);
-            //mService.setAutomaticallyReconnect(true);
         }
 
         @Override
@@ -135,30 +104,8 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
             Log.v(TAG, "onServiceDisconnected");
             mService = null;
         }
-    };
+    };*/
 
-    private BroadcastReceiver mDevicePicker;
-    private ActivityResultLauncher<Intent> mActivityResultLauncher =
-            registerForActivityResult(
-                    new ActivityResultContracts.StartActivityForResult(),
-                    new ActivityResultCallback<ActivityResult>() {
-                        @Override
-                        public void onActivityResult(ActivityResult result) {
-                            if (result != null && result.getResultCode() == Activity.RESULT_OK) {
-                                Intent intent = result.getData();
-
-                                driverSelected(intent);
-                                /*switch (intent.getAction()) {
-                                    case SELECT_DEVICE_SELECTED:
-                                        deviceSelected(intent);
-                                        break;
-                                    case SELECT_DRIVER_SELECTED:
-                                        driverSelected(intent);
-                                        break;
-                                }*/
-                            }
-                        }
-                    });
     private ActivityResultLauncher<String[]> mPermissionsRequest =
             registerForActivityResult(
                     new ActivityResultContracts.RequestMultiplePermissions(),
@@ -245,86 +192,17 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
         TabLayout tabs = mBinding.tabs;
         tabs.setupWithViewPager(viewPager);
 
-        ServiceUtils.startService(getApplicationContext());
-
-        mDevicePicker = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if (intent != null) {
-                    String action = intent.getAction();
-
-                    if (SELECT_DEVICE_SELECTED.equals(action)) {
-                        deviceSelected(intent);
-                    }
-                }
-                unregisterReceiver(mDevicePicker);
-            }
-        };
-
         if (!hasPermissions()) {
             requestPermissions();
         } else {
             mHasPermissions = true;
         }
 
-        mDeviceButton = (MaterialButton)findViewById(R.id.button_pttDevice);
-        mDeviceLabel = (TextView)findViewById(R.id.label_pttDevice);
-        mDriverButton = (MaterialButton)findViewById(R.id.button_pttDriver);
-        mDriverLabel = (TextView)findViewById(R.id.label_pttDriver);
-        mStatusText = (TextView)findViewById(R.id.label_status_text);
-        mAutoConnect = (CheckBox)findViewById(R.id.checkBox_pttDeviceAutoConnect);
-        mAutoReconnect = (CheckBox)findViewById(R.id.checkBox_pttDeviceAutoReconnect);
-        mPttDownKeyDelayInput = (TextInputEditText)findViewById(R.id.input_pttDevicePttDownKeyDelay);
-        mEfabAdd = (ExtendedFloatingActionButton) findViewById(R.id.efab_add);
-        mFabAddDevice = (FloatingActionButton) findViewById(R.id.fab_addDevice);
-        mTextAddDevice = (TextView) findViewById(R.id.text_addDevice);
-        mFabAddDriver = (FloatingActionButton) findViewById(R.id.fab_addDriver);
-        mTextAddDriver = (TextView) findViewById(R.id.text_addDriver);
-
-        mDeviceButton.setOnClickListener(new View.OnClickListener() {
-             @Override
-             public void onClick(View v) {
-                selectDevice();
-             }
-         });
-        mDriverButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                selectDriver();
-            }
-        });
-        mAutoConnect.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (mService != null) {
-                    mService.setConnectOnComplete(isChecked);
-                }
-            }
-        });
-        mAutoReconnect.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (mService != null) {
-                    mService.setAutomaticallyReconnect(isChecked);
-                }
-            }
-        });
-        mPttDownKeyDelayInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (!s.toString().isEmpty() && mService != null) {
-                    mService.setPttDownKeyDelay(Integer.parseInt(s.toString()));
-                }
-            }
-        });
+        mEfabAdd = findViewById(R.id.efab_add);
+        mFabAddDevice = findViewById(R.id.fab_addDevice);
+        mTextAddDevice = findViewById(R.id.text_addDevice);
+        mFabAddDriver = findViewById(R.id.fab_addDriver);
+        mTextAddDriver = findViewById(R.id.text_addDriver);
 
         mEfabAdd.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -350,18 +228,80 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
 
         toggleAddFab(true);
 
-        Intent connectIntent = new Intent(this, DeviceDriverService.class);
-        bindService(connectIntent, mConnection, 0);
+        mDeviceServiceManager = new DeviceDriverServiceManager();
+
+        /*Intent connectIntent = new Intent(this, BluetoothDeviceDriverService.class);
+        bindService(connectIntent, mConnection, 0);*/
+    }
+
+    // TODO: Reorg
+    private IDeviceDriverService createAndBindService(int deviceId, Class<?> cls) {
+        mDeviceServiceManager.createService(deviceId, this);
+
+        ServiceUtils.startService(cls, getApplicationContext());
+
+        Intent connectIntent = new Intent(this, cls);
+        bindService(connectIntent, mDeviceServiceManager.getConnection(deviceId), 0);
+
+        return mDeviceServiceManager.getService(deviceId);
+    }
+
+    private void unbindAllServices() {
+        Map<Integer, DeviceDriverServiceHolder> services = mDeviceServiceManager.getAllServices();
+
+        for (Map.Entry<Integer, DeviceDriverServiceHolder> service: services.entrySet()) {
+            DeviceDriverServiceHolder holder = service.getValue();
+
+            if (holder != null && holder.getService() != null) {
+                holder.getService().unregisterStatusListener(this);
+                unbindService(holder.getConnection());
+            }
+        }
+    }
+
+    private void reregisterAllListeners() {
+        Map<Integer, DeviceDriverServiceHolder> services = mDeviceServiceManager.getAllServices();
+
+        for (Map.Entry<Integer, DeviceDriverServiceHolder> service: services.entrySet()) {
+            mDeviceServiceManager.recreateService(service.getKey(), this);
+            /*DeviceDriverServiceHolder holder = service.getValue();
+
+            if (holder != null && holder.getService() != null) {
+                holder.getService().registerStatusListener(this);
+            }*/
+        }
+    }
+    private void unregisterAllListeners() {
+        Map<Integer, DeviceDriverServiceHolder> services = mDeviceServiceManager.getAllServices();
+
+        for (Map.Entry<Integer, DeviceDriverServiceHolder> service: services.entrySet()) {
+            DeviceDriverServiceHolder holder = service.getValue();
+
+            if (holder != null && holder.getService() != null) {
+                holder.getService().unregisterStatusListener(this);
+            }
+        }
+    }
+
+    private IDeviceDriverService getService(int deviceId) {
+        return mDeviceServiceManager.getService(deviceId);
+    }
+
+    private ServiceConnection getConnection(int deviceId) {
+        return mDeviceServiceManager.getConnection(deviceId);
     }
 
     @Override
     public void onDestroy() {
         Log.v(TAG, "onDestroy");
 
-        if (mService != null)
+        /*if (mService != null)
             mService.unregisterStatusListener(this);
 
-        unbindService(mConnection);
+        unbindService(mConnection);*/
+
+        // TODO: Migrate
+        unbindAllServices();
 
         super.onDestroy();
     }
@@ -372,12 +312,15 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
 
         super.onResume();
 
-        if (mService != null)
-            mService.registerStatusListener(this);
+        /*if (mService != null)
+            mService.registerStatusListener(this);*/
         /*
-        Intent connectIntent = new Intent(this, DeviceDriverService.class);
+        Intent connectIntent = new Intent(this, BluetoothDeviceDriverService.class);
         bindService(connectIntent, mConnection, 0);
         */
+
+        // TODO: Migrate
+        reregisterAllListeners();
     }
 
     @Override
@@ -386,10 +329,13 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
 
         super.onPause();
 
-        if (mService != null)
+        /*if (mService != null)
             mService.unregisterStatusListener(this);
 
-        //unbindService(mConnection);
+        //unbindService(mConnection);*/
+
+        // TODO: Migrate
+        unregisterAllListeners();
     }
 
     private void toggleAddFab() { toggleAddFab(false); }
@@ -424,63 +370,6 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
         return true;
     }
 
-    private void selectDevice() {
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(SELECT_DEVICE_SELECTED);
-        registerReceiver(mDevicePicker, filter);
-
-        Intent intent = new Intent(SELECT_DEVICE_ACTION);
-        intent.setFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
-        startActivity(intent);
-        //mActivityResultLauncher.launch(intent);
-    }
-    private void deviceSelected(Intent resultData) {
-        if (resultData != null) {
-            mPttDevice = resultData.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-
-            if (mPttDevice != null) {
-                Log.d(TAG, "Selected device: " + mPttDevice.getName());
-
-                mDeviceLabel.setText(mPttDevice.getName());
-
-                if (mService != null)
-                    mService.setPttDevice(mPttDevice);
-            }
-        }
-    }
-
-    private void selectDriver() {
-        Intent filePicker = new Intent(Intent.ACTION_GET_CONTENT);
-        filePicker.addCategory(Intent.CATEGORY_OPENABLE);
-        filePicker.setType("*/*");
-        mActivityResultLauncher.launch(Intent.createChooser(filePicker,
-                                            getString(R.string.select_driver)));
-    }
-    private void driverSelected(Intent resultData) {
-        if (resultData != null) {
-            mPttDriverPath = resultData.getData();
-
-            try {
-                mPttDriver = new PttDriver(getApplicationContext(), mPttDriverPath);
-
-                Log.d(TAG, "Parsed PttDriver:\n" + mPttDriver);
-
-                if (mPttDriver.isValid()) {
-                    mDriverLabel.setText(mPttDriver.getDriverName());
-
-                    if (mService != null)
-                        mService.setPttDriver(mPttDriver);
-                    // else do something......
-                } else {
-                    onStatusMessageUpdate(getString(R.string.status_invalid_driver));
-                }
-            } catch (Exception e) {
-                Log.d(TAG, "Failed to open driver file. Received exception: " + e);
-                onStatusMessageUpdate("Failed to open driver file. Received exception: " + e);
-                e.printStackTrace();
-            }
-        }
-    }
 
     private void addDriver() {
         addOrEditDriver(null, ModelDataAction.ADD);
@@ -509,19 +398,72 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
         dialog.show(getSupportFragmentManager(), DeviceEditFragment.TAG);
     }
 
-    private void connectToDevice(Device device) {
-        // get driver
-        // set options for DeviceDriverService
-        // connect
+    /*private void connectToDevice(Device device) {
+        if (device != null) {
+            if (mService != null) {
+                Driver driver = null;
+                PttDriver pttDriver = null;
 
-        if (mService != null) {
+                if (mService.getConnectionState() != DeviceConnectionState.Disconnected) {
+                    mService.disconnect();
+                }
+
+                if (device.getDriverId() != -1) {
+                    driver = mDatabase.getDriver(device.getDriverId());
+                } else {
+                    List<Driver> drivers = mDatabase.getDrivers();
+
+                    for (Driver test : drivers) {
+                        if (test.getDeviceNameMatch() != null) {
+                            if (device.getName().contains(test.getDeviceNameMatch())) {
+                                driver = test;
+                            }
+                        }
+                    }
+                }
+
+                if (driver != null) {
+                    try {
+                        pttDriver = new PttDriver(getApplicationContext(), driver.getJson());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+
+                        Log.d(TAG, "Received exception opening \"" + driver.getName() + "\": " + e);
+                        Log.v(TAG, "Driver JSON: " + driver.getJson());
+
+                        // Show error
+                        return;
+                    }
+                } else {
+                    // Show error
+                    return;
+                }
+
+                mService.setPttDevice(device);
+                if (mService.deviceIsValid()) {
+                    mService.setPttDriver(null);
+
+                    mService.setAutomaticallyReconnect(device.getAutoReconnect());
+
+                    mService.setPttDriver(pttDriver);
+
+                    mService.connect();
+                } else {
+                    // Show error
+                }
+            } else {
+                // Show error
+            }
+        } else {
+            // Show error
+        }
+    }*/
+
+    private void connectToDevice(final Device device) {
+        if (device != null) {
             Driver driver = null;
             PttDriver pttDriver = null;
-            BluetoothDevice pttDevice = null;
-
-            if (mService.getConnected() != DeviceDriverService.Connected.False) {
-                mService.disconnect();
-            }
+            IDeviceDriverService service = mDeviceServiceManager.getService(device.getId());
 
             if (device.getDriverId() != -1) {
                 driver = mDatabase.getDriver(device.getDriverId());
@@ -537,44 +479,60 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
                 }
             }
 
-            BluetoothManager btManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
-            BluetoothAdapter btAdapter = btManager.getAdapter();
-            //Set<BluetoothDevice> btDevices = btAdapter.getBondedDevices();
+            if (driver != null) {
+                try {
+                    pttDriver = new PttDriver(getApplicationContext(), driver.getJson());
+                } catch (Exception e) {
+                    e.printStackTrace();
 
-            /*for (BluetoothDevice btDevice : btDevices) {
-                if (btDevice.getAddress().contains(device.getMacAddress())) {
-                    pttDevice = btDevice;
+                    Log.d(TAG, "Received exception opening \"" + driver.getName() + "\": " + e);
+                    Log.v(TAG, "Driver JSON: " + driver.getJson());
+
+                    // Show error
+                    return;
                 }
-            }*/
-            pttDevice = btAdapter.getRemoteDevice(device.getMacAddress());
+            } else {
+                // Show error
+                return;
+            }
 
-            if (pttDevice != null) {
-                if (driver != null) {
-                    try {
-                        pttDriver = new PttDriver(getApplicationContext(), driver.getJson());
-                    } catch (Exception e) {
-                        e.printStackTrace();
+            if (service == null ||
+                    service.getClass() != DeviceDriverServiceManager.getServiceClassForDeviceType(device.getDeviceType(), pttDriver.getType())) {
 
-                        Log.d(TAG, "Received exception opening \"" + driver.getName() + "\": " + e);
-                        Log.v(TAG, "Driver JSON: " + driver.getJson());
+                if (service != null && service.getConnectionState() != DeviceConnectionState.Disconnected) {
+                    service.disconnect();
+                }
+                createAndBindService(device.getId(),
+                        DeviceDriverServiceManager.getServiceClassForDeviceType(device.getDeviceType(), pttDriver.getType()));
 
-                        // Show error
+                // Re-run with a delay to give the service time to connect
+                final Handler handler = new Handler(getMainLooper());
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        connectToDevice(device);
                     }
+                }, 500);
+
+                return;
+            }
+
+            if (service != null) {
+                if (service.getConnectionState() != DeviceConnectionState.Disconnected) {
+                    service.disconnect();
+                }
+
+                service.setPttDevice(device);
+                if (service.deviceIsValid()) {
+                    service.setPttDriver(null);
+
+                    service.setAutomaticallyReconnect(device.getAutoReconnect());
+
+                    service.setPttDriver(pttDriver);
+
+                    service.connect();
                 } else {
                     // Show error
-                }
-
-                if (pttDriver != null) {
-                    mService.setPttDriver(null);
-                    mService.setPttDevice(null);
-
-                    //mService.setConnectOnComplete(device.getAutoConnect());
-                    mService.setAutomaticallyReconnect(device.getAutoReconnect());
-
-                    mService.setPttDriver(pttDriver);
-                    mService.setPttDevice(pttDevice);
-
-                    mService.connect();
                 }
             } else {
                 // Show error
@@ -617,12 +575,12 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
                 startActivity(intent);
                 break;
             case R.id.menu_action_bt_connect:
-                if (mService != null)
-                    mService.connect();
+                /*if (mService != null)
+                    mService.connect();*/
                 break;
             case R.id.menu_action_bt_disconnect:
-                if (mService != null)
-                    mService.disconnect();
+                /*if (mService != null)
+                    mService.disconnect();*/
                 break;
             default:
         }
@@ -631,11 +589,11 @@ public class MainActivity extends AppCompatActivity implements DeviceDriverServi
 
     @Override
     public void onStatusMessageUpdate(String message) {
-        runOnUiThread(new Runnable() {
+        /*runOnUiThread(new Runnable() {
             public void run() {
                 mStatusText.setText(message);
             }
-        });
+        });*/
     }
     @Override
     public void onConnected() {

@@ -26,7 +26,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".service.DeviceDriverService"
+        <service android:name=".service.BluetoothDeviceDriverService"
+            android:exported="true"
+            android:enabled="true" />
+        <service android:name=".service.FileStreamDeviceDriverService"
             android:exported="true"
             android:enabled="true" />
     </application>

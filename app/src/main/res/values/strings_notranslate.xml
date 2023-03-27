@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array
+        name="device_type_names">
+        <item>@string/bluetooth</item>
+        <item>@string/local</item>
+    </string-array>
+
+    <string-array
+        name="device_type_values">
+        <item>bluetooth</item>
+        <item>local</item>
+    </string-array>
+
+    <string name="local_device_address_prefix">local_</string>
+</resources>
