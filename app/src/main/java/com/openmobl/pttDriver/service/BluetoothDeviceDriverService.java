@@ -700,14 +700,23 @@ public class BluetoothDeviceDriverService extends Service implements IDeviceDriv
 
             PttDriver.IntentMap pttIntentMap = mPttDriver.getReadObj() != null ? mPttDriver.getReadObj().getIntentMap() : null;
 
+            /*if (pttIntentMap != null) {
+                Log.v(TAG, "Intent map: " + pttIntentMap.toString());
+                Log.v(TAG, "Hex key: " + TextUtil.toHexString(key.getBytes()));
+            } else {
+                Log.v(TAG, "No intent map! :(");
+            }*/
+
             if (pttIntentMap != null && pttIntentMap.containsKey(key)) {
                 intentName = pttIntentMap.get(key);
             }
 
+            Log.v(TAG, "Mapped intent: " + intentName);
+
             if (mPttDriver.getType() == PttDriver.ConnectionType.HFP) {
                 // If we aren't doing anything with this data then pass it to the HFP engine
                 if (intentName == null) {
-                    ((HfpSerialSocket) mSocket).processAtCommands(key);
+                    ((HfpSerialSocket) mSocket).processAtCommands(new String(data));
                 } else { // Otherwise, acknowledge it
                     AtCommandResult result = new AtCommandResult(AtCommandResult.OK);
 

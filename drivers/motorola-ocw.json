@@ -1,0 +1,20 @@
+{
+	"name": "Motorola OCW",
+	"deviceName": "OCW_RSM_TPP",
+	"type": "spp",
+	"read": {
+	  "pttDownKeyIntent": "android.intent.action.PTT.pressed",
+		"defaultPttDownKeyDelay": 0,
+		"intentDeDuplicate": true,
+		"intentDeDuplicateTimeout": 50,
+		"eol": "00",
+		"serialDataType": "ascii",
+		"intentMap": {
+			"+PTT=P": "android.intent.action.PTT.pressed",
+			"+PTT=R": "android.intent.action.PTT.released",
+			"+PTTE=P": "android.intent.action.SOS",
+			"+PTTB1=R": "android.intent.action.TALK_GROUP.prev",
+			"+PTTB2=R": "android.intent.action.TALK_GROUP.next"
+		}
+	}
+}

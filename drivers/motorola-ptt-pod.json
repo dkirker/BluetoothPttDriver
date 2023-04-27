@@ -1,0 +1,21 @@
+{
+	"name": "Motorola PTT Pod",
+	"deviceName": "PTT",
+	"type": "hfp",
+	"read": {
+	  "pttDownKeyIntent": "android.intent.action.PTT.pressed",
+		"defaultPttDownKeyDelay": 0,
+		"intentDeDuplicate": true,
+		"intentDeDuplicateTimeout": 50,
+		"eol": "0D",
+		"serialDataType": "ascii",
+		"intentMap": {
+			"AT+CTKST=0,1,0": "android.intent.action.PTT.pressed",
+			"AT+CTKST=0,1,1": "android.intent.action.PTT.pressed",
+			"AT+CTKST=0,1,2": "android.intent.action.PTT.pressed",
+			"AT+CTKST=0,0,0": "android.intent.action.PTT.released",
+			"AT+CTKST=0,0,1": "android.intent.action.PTT.released",
+			"AT+CTKST=0,0,2": "android.intent.action.PTT.released"
+		}
+	}
+}

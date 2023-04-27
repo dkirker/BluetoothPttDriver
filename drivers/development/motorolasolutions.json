@@ -1,0 +1,40 @@
+{
+	"name": "Motorola Solutions Ops Critical",
+	"deviceName": "this",
+	"type": "filestream",
+
+	"read": {
+		"pttDownKeyIntent": "android.intent.action.PTT.pressed",
+		"defaultPttDownKeyDelay": 0,
+		"eol": "00",
+		"serialDataType": "ascii",
+
+		"operations": {
+				"getCodeAndValue": "try { byte[] dataBytes = new byte[48]; data.read(dataBytes, 0, 48); long code = (dataBytes[19] & 0xFF) << 8 | dataBytes[18] & 0xFF; long value = (dataBytes[23] & 0xFF) << 24 | (dataBytes[22] & 0xFF) << 16 | (dataBytes[21] & 0xFF) << 8 | dataBytes[20] & 0xFF; if (code == 700 || code == 702) data.read(dataBytes, 0, 24); return String.format(\"%i:%i\", code, value); } catch (Exception e) { return \"\"; }"
+		},
+
+		"files": [
+			{
+				"filename": "/dev/input/event3",
+				"preprocess": "getCodeAndValue",
+				"intentMap": {
+					"766:1": "android.intent.action.PTT.pressed",
+					"766:0": "android.intent.action.PTT.released",
+					"528:1": "android.intent.action.SOS",
+					"765:1": "android.intent.action.P1",
+					"767:1": "android.intent.action.P2",
+					"698:1": "android.intent.action.SLIDER.closed",
+					"698:0": "android.intent.action.SLIDER.open"
+				}
+			},
+			{
+				"filename": "/dev/input/event1",
+				"preprocess": "getCodeAndValue",
+				"intentMap": {
+					"700:1": "android.intent.action.HOLSTER.in",
+					"702:1": "android.intent.action.HOLSTER.out"
+				}
+			}
+		]
+	}
+}
