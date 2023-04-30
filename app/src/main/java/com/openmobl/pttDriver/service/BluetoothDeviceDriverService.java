@@ -74,6 +74,8 @@ public class BluetoothDeviceDriverService extends Service implements IDeviceDriv
     private boolean mAutomaticallyReconnect;
     private int mPttDownKeyDelay;
     private boolean mPttDownKeyDelayOverride;
+    private String mCachedDeviceName = "";
+    private String mCachedDeviceAddress = "";
 
     private NotificationCompat.Builder mNotificationBuilder;
 
@@ -403,6 +405,10 @@ public class BluetoothDeviceDriverService extends Service implements IDeviceDriv
 
         createNotification(mSocket != null ? getString(R.string.connected_to_prefix) + " " + getDeviceName() : getString(R.string.background_service));
 
+        mCachedDeviceName = getDeviceName();
+        mCachedDeviceAddress = getDeviceAddress();
+        DeviceEventBroadcaster.sendDeviceConnected(this, mCachedDeviceName, mCachedDeviceAddress);
+
         if (mStatusListener != null) {
             mStatusListener.onConnected();
         }
@@ -497,6 +503,8 @@ public class BluetoothDeviceDriverService extends Service implements IDeviceDriv
             mStatusListener.onDisconnected();
         }
 
+        DeviceEventBroadcaster.sendDeviceDisconnected(this, mCachedDeviceName, mCachedDeviceAddress);
+
         disconnect();
         reconnectAutomatically();
     }
@@ -509,6 +517,7 @@ public class BluetoothDeviceDriverService extends Service implements IDeviceDriv
         mConnectionState = DeviceConnectionState.Disconnected;
 
         createNotification(getString(R.string.status_disconnected));
+        DeviceEventBroadcaster.sendDeviceDisconnected(this, mCachedDeviceName, mCachedDeviceAddress);
 
         if (mStatusListener != null) {
             mStatusListener.onDisconnected();
@@ -771,6 +780,7 @@ public class BluetoothDeviceDriverService extends Service implements IDeviceDriv
 
         // Are we actually "disconnected"?
         createNotification(getString(R.string.status_disconnected));
+        DeviceEventBroadcaster.sendDeviceDisconnected(this, mCachedDeviceName, mCachedDeviceAddress);
 
         if (mStatusListener != null) {
             mStatusListener.onDisconnected();
@@ -785,6 +795,8 @@ public class BluetoothDeviceDriverService extends Service implements IDeviceDriv
             createNotification(
                     (mSocket != null ? getString(R.string.connected_to_prefix) + " " + getDeviceName() : getString(R.string.background_service)) +
                             " - " + getString(R.string.battery_prefix) + " " + level + "%");
+
+            DeviceEventBroadcaster.sendDeviceBatteryState(this, mCachedDeviceName, mCachedDeviceAddress, level);
 
             if (mStatusListener != null) {
                 mStatusListener.onBatteryEvent(level);
