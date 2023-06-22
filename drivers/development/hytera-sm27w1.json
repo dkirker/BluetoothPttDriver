@@ -5,7 +5,7 @@
 	"write": {
 		"startCmdStr": "",
 		"startCmdStrType": "ascii",
-		"eol": "\r\n",
+		"eol": "0D 0A",
 		"serialDataType": "ascii",
 		"intentMap": {
 			"android.intent.ZONES.current": "",
@@ -21,7 +21,7 @@
 		"defaultPttDownKeyDelay": 0,
 		"intentDeDuplicate": true,
 		"intentDeDuplicateTimeout": 50,
-		"eol": "\r",
+		"eol": "0D",
 		"serialDataType": "ascii",
 		"intentMap": {
 			"+PTT=P": "android.intent.action.PTT.pressed",
